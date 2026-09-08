@@ -19,6 +19,8 @@
 
 #include <omp.h>
 
+#include "meta_qt/designs/stock/stock.hpp"
+
 #include "highmap/opencl/gpu_opencl.hpp"
 #include "highmap/openmp.hpp"
 
@@ -80,6 +82,9 @@ HesiodApplication::HesiodApplication(int &argc, char **argv) : QApplication(argc
   // Blender streamer
   this->blender_streamer.start();
 
+  // meta design registration
+  meta::qt::stock::register_design();
+
   // --- Batch CLI mode if requested
 
   args::ArgumentParser parser("Hesiod.");
@@ -134,12 +139,25 @@ HesiodApplication::HesiodApplication(int &argc, char **argv) : QApplication(argc
   if (fname.empty() &&
       this->context.app_settings.interface.enable_example_selector_at_startup)
   {
-    std::string path = this->context.app_settings.global.ready_made_path;
-    auto       *ex_dialog = new ExampleSelectorDialog(QString::fromStdString(path));
-    bool        ret = ex_dialog->exec();
+    std::string           path = this->context.app_settings.global.ready_made_path;
+    ExampleSelectorDialog ex_dialog(QString::fromStdString(path));
+    ex_dialog.exec();
 
-    if (ret)
-      fname = ex_dialog->selected_file().toStdString();
+    // Closing the window is a decision not to open anything, so the app stops
+    // rather than dropping the user into a project they never asked for. New
+    // Project falls through with an empty filename, which is what starts one.
+    if (ex_dialog.outcome() == ExampleSelectorDialog::Outcome::Closed)
+    {
+      splash->close();
+      delete splash;
+      ::exit(0);
+    }
+
+    if (ex_dialog.outcome() == ExampleSelectorDialog::Outcome::OpenFile)
+    {
+      fname = ex_dialog.selected_file().toStdString();
+      keep_name = ex_dialog.selected_is_project();
+    }
   }
 
   this->load_project_model_and_ui(fname, keep_name);
@@ -583,15 +601,33 @@ void HesiodApplication::on_load_ready_made()
   if (!this->confirm_discard_unsaved_changes("Open Ready-made Example"))
     return;
 
-  std::string path = this->context.app_settings.global.ready_made_path;
-  auto       *ex_dialog = new ExampleSelectorDialog(QString::fromStdString(path));
-  bool        ret = ex_dialog->exec();
+  std::string           path = this->context.app_settings.global.ready_made_path;
+  ExampleSelectorDialog ex_dialog(QString::fromStdString(path));
+  ex_dialog.exec();
 
-  if (ret)
+  switch (ex_dialog.outcome())
   {
-    std::string fname = ex_dialog->selected_file().toStdString();
-    bool        keep_name = false;
+  case ExampleSelectorDialog::Outcome::OpenFile:
+  {
+    const std::string fname = ex_dialog.selected_file().toStdString();
+    const bool        keep_name = ex_dialog.selected_is_project();
     this->load_project_model_and_ui(fname, keep_name);
+    if (keep_name)
+      this->add_recent_file(fname);
+    break;
+  }
+
+  case ExampleSelectorDialog::Outcome::NewProject:
+    // Reached from the menu bar with a project already open, where this used
+    // to close the window and leave that project untouched. An empty filename
+    // is what load_project_model_and_ui() treats as a fresh start.
+    this->load_project_model_and_ui("", false);
+    break;
+
+  case ExampleSelectorDialog::Outcome::Closed:
+    // Dismissed from the menu bar, so keep whatever is already open. Only the
+    // startup path treats closing as a reason to quit.
+    break;
   }
 }
 

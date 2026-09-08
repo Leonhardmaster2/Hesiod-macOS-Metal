@@ -150,6 +150,12 @@ void AppSettings::json_from(nlohmann::json const &json)
   json_safe_get(json,
                 "interface.enable_example_selector_at_startup",
                 interface.enable_example_selector_at_startup);
+  json_safe_get(json,
+                "interface.properties_panel_design",
+                interface.properties_panel_design);
+  json_safe_get(json,
+                "interface.properties_panel_theme",
+                interface.properties_panel_theme);
 
   // OpenCL device
 #if HIGHMAP_HAS_OPENCL
@@ -270,6 +276,8 @@ nlohmann::json AppSettings::json_to() const
   json["interface.enable_tool_tips"] = interface.enable_tool_tips;
   json["interface.enable_example_selector_at_startup"] =
       interface.enable_example_selector_at_startup;
+  json["interface.properties_panel_design"] = interface.properties_panel_design;
+  json["interface.properties_panel_theme"] = interface.properties_panel_theme;
 
   json["node_editor.gpu_device_name"] = node_editor.gpu_device_name;
   json["node_editor.default_resolution"] = node_editor.default_resolution;
