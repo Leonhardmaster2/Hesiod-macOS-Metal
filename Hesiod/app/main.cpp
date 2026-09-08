@@ -6,6 +6,8 @@ typedef unsigned int uint;
 #include <exception>
 #include <new>
 
+#include <QSurfaceFormat>
+
 #include "hesiod/app/hesiod_application.hpp"
 #include "hesiod/cli/batch_mode.hpp"
 #include "hesiod/logger.hpp"
@@ -35,6 +37,27 @@ int main(int argc, char *argv[])
           "--ignore-gpu-blocklist "
           "--enable-webgl "
           "--disable-gpu-driver-bug-workarounds");
+
+  // macOS only grants an OpenGL 3.2+ context when a core profile is asked for
+  // explicitly, and the request has to happen before the QApplication exists.
+  // Without it the driver hands back a legacy 2.1 compatibility context, the
+  // 3D viewport cannot resolve its 3.3 core function table, and loading a
+  // heightmap dereferences the unresolved pointers.
+  //
+  // Deliberately macOS-only: requesting 3.3 core unconditionally has been seen
+  // to break context creation on the Windows/NVIDIA machine, which is why
+  // QTerrainRenderer's RenderWidget constructor refuses to do it per-widget and
+  // points here instead.
+#if defined(HSD_OS_MACOS)
+  {
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+    format.setVersion(3, 3);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    QSurfaceFormat::setDefaultFormat(format);
+  }
+#endif
 
   // Backstop only: anything that reaches here has already escaped the guards
   // around graph updates. Reporting it and exiting non-zero beats std::terminate
