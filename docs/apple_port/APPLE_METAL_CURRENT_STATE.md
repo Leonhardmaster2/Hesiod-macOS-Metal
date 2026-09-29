@@ -42,6 +42,36 @@ MorphologicalOperators, legacy MorphologicalGradient, SmoothCpulse, Thermal,
 SelectSlope, ExpandShrink, Jagged, RecastCliff, …) run in `--batch` mode at
 512² without errors.
 
+## Full macOS validation (later on 2026-09-29)
+
+Upstream `dev` was re-synced (`fed61165`, TWI node). Everything below ran
+against the final build on the Apple M3 (8 GB, macOS 27.2).
+
+* **Hesiod tests:** 4/4 ctest suites pass (unit build/run, graph editor,
+  autosave). 102 of 119 hsd-tooling pytest tests pass; the other 17 still use
+  nodes upstream removed (`NoiseFbm`, `NoiseIq`) or an old docs layout.
+* **All 258 example graphs, headless at their own resolution:** 255 run
+  cleanly. The other 3 (`CloudFromCsv`, `PathFromCsv`, `ImportHeightmap`)
+  point at input files that only exist on the upstream author's machine. There
+  were no crashes or hangs (earlier: 8 crashes and 1 hang, from the HighMap
+  tile-storage race).
+* **Metal vs OpenCL A/B:** `--phase4-benchmark` with `HESIOD_PHASE4_DUMP_DIR`,
+  once with Metal and once with `HIGHMAP_DISABLE_METAL=1`, 1106 node outputs;
+  see HighMap `UPSTREAM_SYNC_2026-09-29.md`. This found that resident runs
+  left intermediate node outputs zero on the host, which would have shown
+  blank previews/viewers in the GUI. Fixed: `flush()` now writes every
+  resident output back.
+* **Export chain:** a 16-bit PNG, 8-bit PNG, 32-bit EXR and 16-bit RAW
+  heightmap, a 16-bit normal map, a 16-bit RGBA texture and a glTF asset
+  (1M vertices + texture + normal map) were exported from one graph. All are
+  valid; the 16-bit outputs use 62,678 distinct levels and contain no NaN.
+* **SpectralEqualizer resident chain:** parity passes at 512²/1024², untiled
+  and 2×2. At 1024² it takes 115 ms, with 0 uploads and 4 readbacks (all
+  node outputs are now on the host).
+* **Install:** `scripts/macos/install_macos_app.sh` builds
+  `~/Applications/Hesiod.app`. The app starts from Finder with every resource
+  loaded from the bundle, and logs to `~/Library/Logs/Hesiod/hesiod.log`.
+
 # Snapshot 2026-09-04 (history)
 
 ## Repository state
