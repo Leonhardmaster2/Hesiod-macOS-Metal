@@ -72,6 +72,36 @@ against the final build on the Apple M3 (8 GB, macOS 27.2).
   `~/Applications/Hesiod.app`. The app starts from Finder with every resource
   loaded from the bundle, and logs to `~/Library/Logs/Hesiod/hesiod.log`.
 
+## 4096² editor performance (evening of 2026-09-29, Apple M4 24 GB)
+
+Measured on `valley_head` at 4096x4096 (batch: 134 s, of which
+FlowSimulation 87.9 s and HydraulicParticle 30.9 s; tile storage in RAM vs
+on disk made no difference).
+
+* **Black 3D terrain:** TextureAdvectionParticle at particle density 0 launched
+  an empty NDRange, which Apple's OpenCL 1.2 rejects
+  (CL_INVALID_GLOBAL_WORK_SIZE); the node failed and left a zero texture.
+  HighMap now skips the launch (pass-through, as the no-op launch elsewhere).
+* **3D viewport** (QTerrainRenderer fork, `feature/apple-macos`): the mesh is
+  capped at 1024² (Display > Mesh Detail) and shaded with per-pixel normals
+  from the full-resolution heightmap; ambient occlusion is baked once per
+  heightmap. 60 -> 8 ms/frame. `QTR_FRAME_STATS=1` logs frame times.
+* **FlowSimulation on Metal:** bit-identical with OpenCL (max diff 0 at
+  512²/1024²) but only ~6% faster at 2048²: both run at ~100 GB/s, the loop is
+  bandwidth bound. Skipping dry tiles was evaluated and dropped: thin water
+  films keep 55-90% of 32² tiles active during the run.
+* **FlowSimulation fast solver** (opt-in node option, `flow_simulation_coarse_to_fine`):
+  full duration on a 4x coarser grid, then 5% of the iterations at full
+  resolution. At 2048² vs the reference: wet-area IoU 0.973, depth error 3.3%,
+  water volume +0.2%, 15x faster. `valley_head` 4096²: 87.9 -> 5.6 s, whole
+  graph 134 -> 46 s.
+* **HydraulicParticle:** 13 M particles x up to 5000 steps (MAX_IT; evaporation
+  1e-3 never ends a path first). A coarse-to-fine variant was evaluated and
+  rejected: erosion-pattern correlation with the reference 0.72 (4x) / 0.91
+  (2x) against 0.997 between two seeds, and ~1.6x the eroded volume, because
+  the erosion constants act per cell. A Metal port is expected to gain <= 1.3x;
+  particle density is the effective cost knob.
+
 # Snapshot 2026-09-04 (history)
 
 ## Repository state
