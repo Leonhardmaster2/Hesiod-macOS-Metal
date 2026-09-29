@@ -1,10 +1,8 @@
 * [Node Reference](index.md)
 * [Categories](categories.md)
 * Boundaries
-    * [Bulkify](nodes/Bulkify.md)
     * [Falloff](nodes/Falloff.md)
     * [SetBorders](nodes/SetBorders.md)
-    * [ZeroedEdges](nodes/ZeroedEdges.md)
 * Bridges
     * [BlenderBridge](nodes/BlenderBridge.md)
 * Converter
@@ -312,11 +310,7 @@
     * [Mudslide](nodes/Mudslide.md)
     * [NormalDisplacement](nodes/NormalDisplacement.md)
     * [NormalMapToHeightmap](nodes/NormalMapToHeightmap.md)
-    * [RecastCanyon](nodes/RecastCanyon.md)
     * [RecastCliff](nodes/RecastCliff.md)
-    * [RecastCliffDirectional](nodes/RecastCliffDirectional.md)
-    * [RecastCracks](nodes/RecastCracks.md)
-    * [RecastSag](nodes/RecastSag.md)
     * [RecurveS](nodes/RecurveS.md)
     * [ReverseMidpoint](nodes/ReverseMidpoint.md)
     * [SedimentDeposition](nodes/SedimentDeposition.md)

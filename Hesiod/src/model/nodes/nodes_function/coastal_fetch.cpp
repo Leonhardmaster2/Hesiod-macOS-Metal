@@ -2,8 +2,8 @@
  * Public License. The full license is in the file LICENSE, distributed with
  * this software. */
 #include "highmap/curvature.hpp"
+#include "highmap/hydrology.hpp"
 #include "highmap/opencl/gpu_opencl.hpp"
-#include "highmap/range.hpp"
 
 #include "hesiod/model/nodes/attributes.hpp"
 
@@ -75,12 +75,12 @@ void compute_coastal_fetch_node(BaseNode &node)
   hmap::for_each_tile(
       {p_in},
       {p_out},
-      [&](std::vector<const hmap::Array *> in,
-          std::vector<hmap::Array *>       out,
+      [&](std::vector<const hmap::Array *> p_arrays_in,
+          std::vector<hmap::Array *>       p_arrays_out,
           const hmap::TileRegion &)
       {
-        auto [pa_in]  = unpack<1>(in);
-        auto [pa_out] = unpack<1>(out);
+        auto [pa_in]  = unpack<1>(p_arrays_in);
+        auto [pa_out] = unpack<1>(p_arrays_out);
 
         *pa_out = hmap::gpu::coastal_fetch(*pa_in, ndirections);
       },

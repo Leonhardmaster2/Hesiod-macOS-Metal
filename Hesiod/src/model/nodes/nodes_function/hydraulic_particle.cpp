@@ -75,7 +75,7 @@ static void setup_common_particle_attributes(BaseNode &node)
 
   node.set_current_category("Bedrock");
   add_bool(node, A_ENABLE_DEFAULT_BEDROCK, "Enable Bedrock Resistance", true);
-  add_float(node, A_BD_ELEVATION_STRENGTH, "Bedrock Elevation Gap", 0.2f, 0.f, 1.f);
+  add_float(node, A_BD_ELEVATION_STRENGTH, "Bedrock Elevation Gap", 0.2f, 0.f, 0.2f);
   add_float(node, A_BD_SLOPE_STRENGTH, "Bedrock Slope Gap", 0.f, 0.f, 1.f);
   add_float(node, A_BD_SLOPE, "Bedrock Slope Limit", 2.f, 0.f, FLT_MAX);
 
@@ -109,7 +109,7 @@ void setup_hydraulic_particle_node(BaseNode &node)
 
     node.set_current_category("Simulation");
     add_seed(node, A_SEED, "Seed");
-    add_float(node, A_PARTICLE_DENSITY, "Particle Density", 0.5f, 0.f, 4.f);
+    add_float(node, A_PARTICLE_DENSITY, "Particle Density", 0.15f, 0.f, 4.f);
 
     setup_common_particle_attributes(node);
   }
@@ -120,9 +120,9 @@ void setup_hydraulic_particle_node(BaseNode &node)
 
     node.set_current_category("Simulation");
     add_seed(node, A_SEED, "Seed");
-    add_int(node, A_LEVELS, "Levels", 3, 1, 6);
-    add_float(node, A_MIX, "Mix", 0.8f, 0.f, 1.f);
-    add_float(node, A_PARTICLE_DENSITY, "Particle Density", 0.5f, 0.f, 4.f);
+    add_int(node, A_LEVELS, "Levels", 4, 1, 6);
+    add_float(node, A_MIX, "Mix", 0.5f, 0.f, 1.f);
+    add_float(node, A_PARTICLE_DENSITY, "Particle Density", 0.15f, 0.f, 4.f);
 
     setup_common_particle_attributes(node);
   }
@@ -139,13 +139,13 @@ void compute_hydraulic_particle_node(BaseNode &node)
 {
   Logger::log()->trace("computing node [{}]/[{}]", node.get_label(), node.get_id());
 
-  auto *p_in         = node.get_value_ref<hmap::VirtualArray>(P_INPUT);
-  auto *p_bedrock    = node.get_value_ref<hmap::VirtualArray>(P_BEDROCK);
-  auto *p_moisture   = node.get_value_ref<hmap::VirtualArray>(P_MOISTURE);
-  auto *p_mask       = node.get_value_ref<hmap::VirtualArray>(P_MASK);
-  auto *p_out        = node.get_value_ref<hmap::VirtualArray>(P_OUTPUT);
-  auto *p_erosion    = node.get_value_ref<hmap::VirtualArray>(P_EROSION);
-  auto *p_deposition = node.get_value_ref<hmap::VirtualArray>(P_DEPOSITION);
+  const auto *p_in         = node.get_value_ref<hmap::VirtualArray>(P_INPUT);
+  const auto *p_bedrock    = node.get_value_ref<hmap::VirtualArray>(P_BEDROCK);
+  const auto *p_moisture   = node.get_value_ref<hmap::VirtualArray>(P_MOISTURE);
+  const auto *p_mask       = node.get_value_ref<hmap::VirtualArray>(P_MASK);
+  auto       *p_out        = node.get_value_ref<hmap::VirtualArray>(P_OUTPUT);
+  auto       *p_erosion    = node.get_value_ref<hmap::VirtualArray>(P_EROSION);
+  auto       *p_deposition = node.get_value_ref<hmap::VirtualArray>(P_DEPOSITION);
 
   if (!p_in)
     return;
@@ -178,7 +178,9 @@ void compute_hydraulic_particle_node(BaseNode &node)
 
   // --- Prepare mask
 
-  std::shared_ptr<hmap::VirtualArray> sp_mask = pre_process_mask(node, p_mask, *p_in);
+  hmap::VirtualArray mask_default = pre_process_mask(node, p_mask, *p_in);
+  if (!mask_default.empty())
+    p_mask = &mask_default;
 
   // --- Compute
 
@@ -274,6 +276,7 @@ void compute_hydraulic_particle_node(BaseNode &node)
             steps_per_level[i] = 1 << (nlevels - 1 - i);
 
           hmap::gpu::hydraulic_particle_multiscale(*pa_out,
+                                                   pa_mask,
                                                    seed,
                                                    steps_per_level,
                                                    pa_bedrock,
@@ -322,13 +325,12 @@ void compute_hydraulic_particle_node(BaseNode &node)
 
   // --- post-treatments
 
-  p_out->smooth_overlap_buffers();
-  p_out->remap(hmin, hmax, node.cfg().cm_cpu);
+  p_out->sync_overlap_buffers();
 
-  p_erosion->smooth_overlap_buffers();
+  p_erosion->sync_overlap_buffers();
   p_erosion->remap(0.f, 1.f, node.cfg().cm_cpu);
 
-  p_deposition->smooth_overlap_buffers();
+  p_deposition->sync_overlap_buffers();
   p_deposition->remap(0.f, 1.f, node.cfg().cm_cpu);
 
   post_process_heightmap(node, *p_out, p_in);

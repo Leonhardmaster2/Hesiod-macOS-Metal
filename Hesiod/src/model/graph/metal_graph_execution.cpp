@@ -244,7 +244,7 @@ bool MetalGraphExecution::resident_candidate(const std::string &node_type)
 {
   return node_type == "CoherentNoise" || node_type == "SpectralEqualizer" ||
          node_type == "Thermal" || node_type == "Blend" ||
-         node_type == "GaborWaveFbm" || node_type == "MorphologicalGradient";
+         node_type == "GaborWaveFbm";
 }
 
 void MetalGraphExecution::prepare_node(BaseNode &node)

@@ -24,8 +24,16 @@ endif()
 option(HESIOD_ENABLE_GENERATE_APP_IMAGE "Enable AppImage generation"
        ${_appimage_default})
 
+option(HESIOD_ENABLE_UI_TESTS
+       "Build the interface scale / node palette regression tests" ON)
+
 option(HESIOD_MINIMAL_NODE_SET
        "Use a minimal set of nodes (ADVANCED DEV ONLY!!!)" OFF)
+
+option(HESIOD_ENABLE_TESTS "Build Hesiod integration tests" OFF)
+if(HESIOD_ENABLE_TESTS)
+  enable_testing()
+endif()
 
 option(HESIOD_ENABLE_LTO "Enable LTO and unused-function detection" OFF)
 option(HESIOD_UNUSED_FUNCTIONS "Detect unused static functions" OFF)
@@ -88,6 +96,8 @@ message(STATUS "│ HESIOD_PROFILE_BUILD:               ${HESIOD_PROFILE_BUILD}"
 message(STATUS "│ HESIOD_ENABLE_PCH:                  ${HESIOD_ENABLE_PCH}")
 message(STATUS "│ CMAKE_BUILD_TYPE:                   ${CMAKE_BUILD_TYPE}")
 message(STATUS "│ CMAKE_CXX_COMPILER_ID:              ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "│ QT_VERSION:                         ${Qt6_VERSION}")
+message(STATUS "│ QT_DIR:                             ${Qt6_DIR}")
 message(STATUS "└─────────────────────────────────────")
 
 # ------------------------------
@@ -95,6 +105,11 @@ message(STATUS "└────────────────────�
 # ------------------------------
 add_subdirectory(external)
 add_subdirectory(Hesiod)
+add_subdirectory(bridges)
+
+if(HESIOD_ENABLE_UI_TESTS)
+  add_subdirectory(tests)
+endif()
 
 # The upstream Meta snapshot used by current Hesiod declares std::ostringstream
 # in a public trait header without including <sstream>. Keep this compatibility

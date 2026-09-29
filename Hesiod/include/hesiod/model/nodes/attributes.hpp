@@ -72,6 +72,11 @@ meta::Attribute<meta::ColorGradient> &add_color_gradient(BaseNode          &node
                                                          const std::string &key,
                                                          const std::string &label);
 
+meta::Attribute<std::string> &add_comment(BaseNode          &node,
+                                          const std::string &key,
+                                          const std::string &label,
+                                          const std::string &value);
+
 meta::Attribute<std::vector<float>> &add_curve(
     BaseNode                 &node,
     const std::string        &key,
@@ -152,7 +157,7 @@ meta::Attribute<glm::vec2> &add_wavenumber(BaseNode          &node,
                                            const std::string &label = "Spatial Frequency",
                                            const glm::vec2   &default_val = {2.f, 2.f},
                                            float              vmin = 0.f,
-                                           float              vmax = 64.f,
+                                           float              vmax = FLT_MAX,
                                            bool               link_xy = true,
                                            const std::string &value_format = "{:.2f}");
 

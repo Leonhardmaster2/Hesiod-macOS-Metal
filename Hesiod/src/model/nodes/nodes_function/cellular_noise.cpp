@@ -188,9 +188,9 @@ void compute_cellular_noise_node(BaseNode &node)
 
   if (current_group == G_GRID)
   {
-    const auto rtype = static_cast<hmap::VoronoiReturnType>(node.val<int>(A_RETURN_TYPE));
-    const auto kw    = node.val<glm::vec2>(A_KW);
-    const auto seed  = node.val<int>(A_SEED);
+    const auto rtype       = node.val_enum<hmap::VoronoiReturnType>(A_RETURN_TYPE);
+    const auto kw          = node.val_wavenumber(A_KW);
+    const auto seed        = node.val<int>(A_SEED);
     const auto jitter      = glm::vec2(node.val<float>(A_JITTER_X),
                                   node.val<float>(A_JITTER_Y));
     const auto k_smoothing = node.val<float>(A_K_SMOOTHING);
@@ -203,11 +203,15 @@ void compute_cellular_noise_node(BaseNode &node)
     if (octaves > 1)
     {
       hmap::for_each_tile(
-          {p_out, p_dx, p_dy, p_ctrl},
-          [&](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &region)
+          {p_dx, p_dy, p_ctrl},
+          {p_out},
+          [&](std::vector<const hmap::Array *> p_arrays_in,
+              std::vector<hmap::Array *>       p_arrays_out,
+              const hmap::TileRegion          &region)
           {
-            auto [pa_out, pa_dx, pa_dy, pa_ctrl] = unpack<4>(p_arrays);
-            *pa_out                              = hmap::gpu::voronoi_fbm(region.shape,
+            auto [pa_dx, pa_dy, pa_ctrl] = unpack<3>(p_arrays_in);
+            auto [pa_out]                = unpack<1>(p_arrays_out);
+            *pa_out                      = hmap::gpu::voronoi_fbm(region.shape,
                                              kw,
                                              seed,
                                              jitter,
@@ -228,11 +232,15 @@ void compute_cellular_noise_node(BaseNode &node)
     else
     {
       hmap::for_each_tile(
-          {p_out, p_dx, p_dy, p_ctrl},
-          [&](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &region)
+          {p_dx, p_dy, p_ctrl},
+          {p_out},
+          [&](std::vector<const hmap::Array *> p_arrays_in,
+              std::vector<hmap::Array *>       p_arrays_out,
+              const hmap::TileRegion          &region)
           {
-            auto [pa_out, pa_dx, pa_dy, pa_ctrl] = unpack<4>(p_arrays);
-            *pa_out                              = hmap::gpu::voronoi(region.shape,
+            auto [pa_dx, pa_dy, pa_ctrl] = unpack<3>(p_arrays_in);
+            auto [pa_out]                = unpack<1>(p_arrays_out);
+            *pa_out                      = hmap::gpu::voronoi(region.shape,
                                          kw,
                                          seed,
                                          jitter,
@@ -252,18 +260,21 @@ void compute_cellular_noise_node(BaseNode &node)
     if (node.val<bool>(A_SQRT_OUTPUT))
     {
       hmap::for_each_tile(
+          {},
           {p_out},
-          [](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &)
+          [](std::vector<const hmap::Array *> p_arrays_in,
+             std::vector<hmap::Array *>       p_arrays_out,
+             const hmap::TileRegion &)
           {
-            hmap::Array *pa_out = p_arrays[0];
-            *pa_out             = hmap::sqrt(*pa_out);
+            auto [pa_out] = unpack<1>(p_arrays_out);
+            *pa_out       = hmap::sqrt(*pa_out);
           },
           node.cfg().cm_cpu);
     }
   }
   else if (current_group == G_LINES)
   {
-    const auto rtype = static_cast<hmap::VoronoiReturnType>(node.val<int>(A_RETURN_TYPE));
+    const auto rtype       = node.val_enum<hmap::VoronoiReturnType>(A_RETURN_TYPE);
     const auto density     = node.val<float>(A_DENSITY);
     const auto seed        = node.val<int>(A_SEED);
     const auto k_smoothing = node.val<float>(A_K_SMOOTHING);
@@ -279,11 +290,15 @@ void compute_cellular_noise_node(BaseNode &node)
     if (octaves > 1)
     {
       hmap::for_each_tile(
-          {p_out, p_dx, p_dy},
-          [&](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &region)
+          {p_dx, p_dy},
+          {p_out},
+          [&](std::vector<const hmap::Array *> p_arrays_in,
+              std::vector<hmap::Array *>       p_arrays_out,
+              const hmap::TileRegion          &region)
           {
-            auto [pa_out, pa_dx, pa_dy] = unpack<3>(p_arrays);
-            *pa_out                     = hmap::gpu::vorolines_fbm(region.shape,
+            auto [pa_dx, pa_dy] = unpack<2>(p_arrays_in);
+            auto [pa_out]       = unpack<1>(p_arrays_out);
+            *pa_out             = hmap::gpu::vorolines_fbm(region.shape,
                                                density,
                                                seed,
                                                k_smoothing,
@@ -304,11 +319,15 @@ void compute_cellular_noise_node(BaseNode &node)
     else
     {
       hmap::for_each_tile(
-          {p_out, p_dx, p_dy},
-          [&](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &region)
+          {p_dx, p_dy},
+          {p_out},
+          [&](std::vector<const hmap::Array *> p_arrays_in,
+              std::vector<hmap::Array *>       p_arrays_out,
+              const hmap::TileRegion          &region)
           {
-            auto [pa_out, pa_dx, pa_dy] = unpack<3>(p_arrays);
-            *pa_out                     = hmap::gpu::vorolines(region.shape,
+            auto [pa_dx, pa_dy] = unpack<2>(p_arrays_in);
+            auto [pa_out]       = unpack<1>(p_arrays_out);
+            *pa_out             = hmap::gpu::vorolines(region.shape,
                                            density,
                                            seed,
                                            k_smoothing,
@@ -328,18 +347,21 @@ void compute_cellular_noise_node(BaseNode &node)
     if (node.val<bool>(A_SQRT_OUTPUT))
     {
       hmap::for_each_tile(
+          {},
           {p_out},
-          [](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &)
+          [](std::vector<const hmap::Array *> p_arrays_in,
+             std::vector<hmap::Array *>       p_arrays_out,
+             const hmap::TileRegion &)
           {
-            hmap::Array *pa_out = p_arrays[0];
-            *pa_out             = hmap::sqrt(*pa_out);
+            auto [pa_out] = unpack<1>(p_arrays_out);
+            *pa_out       = hmap::sqrt(*pa_out);
           },
           node.cfg().cm_cpu);
     }
   }
   else if (current_group == G_SCATTERED)
   {
-    const auto rtype = static_cast<hmap::VoronoiReturnType>(node.val<int>(A_RETURN_TYPE));
+    const auto rtype       = node.val_enum<hmap::VoronoiReturnType>(A_RETURN_TYPE);
     const auto density     = node.val<float>(A_DENSITY);
     const auto variability = node.val<float>(A_VARIABILITY);
     const auto seed        = node.val<int>(A_SEED);
@@ -347,10 +369,14 @@ void compute_cellular_noise_node(BaseNode &node)
     const auto exp_sigma   = node.val<float>(A_EXP_SIGMA);
 
     hmap::for_each_tile(
-        {p_out, p_dx, p_dy},
-        [&](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &region)
+        {p_dx, p_dy},
+        {p_out},
+        [&](std::vector<const hmap::Array *> p_arrays_in,
+            std::vector<hmap::Array *>       p_arrays_out,
+            const hmap::TileRegion          &region)
         {
-          auto [pa_out, pa_dx, pa_dy] = unpack<3>(p_arrays);
+          auto [pa_dx, pa_dy] = unpack<2>(p_arrays_in);
+          auto [pa_out]       = unpack<1>(p_arrays_out);
           if (p_cloud && p_cloud->size() > 0)
           {
             *pa_out = hmap::gpu::vororand(region.shape,
@@ -384,28 +410,35 @@ void compute_cellular_noise_node(BaseNode &node)
     if (node.val<bool>(A_SQRT_OUTPUT))
     {
       hmap::for_each_tile(
+          {},
           {p_out},
-          [](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &)
+          [](std::vector<const hmap::Array *> p_arrays_in,
+             std::vector<hmap::Array *>       p_arrays_out,
+             const hmap::TileRegion &)
           {
-            hmap::Array *pa_out = p_arrays[0];
-            *pa_out             = hmap::sqrt(*pa_out);
+            auto [pa_out] = unpack<1>(p_arrays_out);
+            *pa_out       = hmap::sqrt(*pa_out);
           },
           node.cfg().cm_cpu);
     }
   }
   else if (current_group == G_VORONOISE)
   {
-    const auto kw   = node.val<glm::vec2>(A_KW);
+    const auto kw   = node.val_wavenumber(A_KW);
     const auto u    = node.val<float>(A_U);
     const auto v    = node.val<float>(A_V);
     const auto seed = node.val<int>(A_SEED);
 
     hmap::for_each_tile(
-        {p_out, p_dx, p_dy},
-        [&](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &region)
+        {p_dx, p_dy},
+        {p_out},
+        [&](std::vector<const hmap::Array *> p_arrays_in,
+            std::vector<hmap::Array *>       p_arrays_out,
+            const hmap::TileRegion          &region)
         {
-          auto [pa_out, pa_dx, pa_dy] = unpack<3>(p_arrays);
-          *pa_out                     = hmap::gpu::voronoise(region.shape,
+          auto [pa_dx, pa_dy] = unpack<2>(p_arrays_in);
+          auto [pa_out]       = unpack<1>(p_arrays_out);
+          *pa_out             = hmap::gpu::voronoise(region.shape,
                                          kw,
                                          u,
                                          v,

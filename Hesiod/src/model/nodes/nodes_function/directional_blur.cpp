@@ -64,10 +64,10 @@ void compute_directional_blur_node(BaseNode &node)
 
   // --- Inputs / Outputs
 
-  auto *p_in    = node.get_value_ref<hmap::VirtualArray>(P_IN);
-  auto *p_angle = node.get_value_ref<hmap::VirtualArray>(P_ANGLE);
-  auto *p_out   = node.get_value_ref<hmap::VirtualArray>(P_OUT);
-  auto *p_mask  = node.get_value_ref<hmap::VirtualArray>(P_MASK);
+  const auto *p_in    = node.get_value_ref<hmap::VirtualArray>(P_IN);
+  const auto *p_angle = node.get_value_ref<hmap::VirtualArray>(P_ANGLE);
+  const auto *p_mask  = node.get_value_ref<hmap::VirtualArray>(P_MASK);
+  auto       *p_out   = node.get_value_ref<hmap::VirtualArray>(P_OUT);
 
   if (!p_in)
     return;
@@ -84,15 +84,21 @@ void compute_directional_blur_node(BaseNode &node)
 
   // --- Resolve mask
 
-  std::shared_ptr<hmap::VirtualArray> sp_mask = pre_process_mask(node, p_mask, *p_in);
+  hmap::VirtualArray mask_default = pre_process_mask(node, p_mask, *p_in);
+  if (!mask_default.empty())
+    p_mask = &mask_default;
 
   // --- Compute
 
   hmap::for_each_tile(
-      {p_out, p_in, p_angle, p_mask},
-      [&](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &)
+      {p_in, p_angle, p_mask},
+      {p_out},
+      [&](std::vector<const hmap::Array *> p_arrays_in,
+          std::vector<hmap::Array *>       p_arrays_out,
+          const hmap::TileRegion &)
       {
-        auto [pa_out, pa_in, pa_angle, pa_mask] = unpack<4>(p_arrays);
+        auto [pa_in, pa_angle, pa_mask] = unpack<3>(p_arrays_in);
+        auto [pa_out]                   = unpack<1>(p_arrays_out);
 
         // resolve angle field
         hmap::Array angle_deg(pa_in->shape, angle);
@@ -106,7 +112,7 @@ void compute_directional_blur_node(BaseNode &node)
       },
       node.cfg().cm_gpu);
 
-  p_out->smooth_overlap_buffers();
+  p_out->sync_overlap_buffers();
 
   // post-process
   post_process_heightmap(node, *p_out, p_in);

@@ -51,6 +51,7 @@ void setup_strata_plates_node(BaseNode &node)
   // --- Attributes
 
   // clang-format off
+  node.set_current_category("Strata");
   add_float(node, A_SLOPE, "Slope", 1.f, 0.f, FLT_MAX);
   add_float(node, A_SKEW, "Skew", 0.5f, 0.f, 8.f);
   add_int(node, A_DIRECTION_COUNT, "Direction Count", 4, 1, 8);
@@ -76,11 +77,11 @@ void compute_strata_plates_node(BaseNode &node)
 {
   Logger::log()->trace("computing node [{}]/[{}]", node.get_label(), node.get_id());
 
-  auto *p_in   = node.get_value_ref<hmap::VirtualArray>(P_IN);
-  auto *p_dx   = node.get_value_ref<hmap::VirtualArray>(P_DX);
-  auto *p_dy   = node.get_value_ref<hmap::VirtualArray>(P_DY);
-  auto *p_mask = node.get_value_ref<hmap::VirtualArray>(P_MASK);
-  auto *p_out  = node.get_value_ref<hmap::VirtualArray>(P_OUT);
+  const auto *p_in   = node.get_value_ref<hmap::VirtualArray>(P_IN);
+  const auto *p_dx   = node.get_value_ref<hmap::VirtualArray>(P_DX);
+  const auto *p_dy   = node.get_value_ref<hmap::VirtualArray>(P_DY);
+  const auto *p_mask = node.get_value_ref<hmap::VirtualArray>(P_MASK);
+  auto       *p_out  = node.get_value_ref<hmap::VirtualArray>(P_OUT);
 
   if (!p_in)
     return;
@@ -101,7 +102,9 @@ void compute_strata_plates_node(BaseNode &node)
 
   // --- Prepare mask
 
-  std::shared_ptr<hmap::VirtualArray> sp_mask = pre_process_mask(node, p_mask, *p_in);
+  hmap::VirtualArray mask_default = pre_process_mask(node, p_mask, *p_in);
+  if (!mask_default.empty())
+    p_mask = &mask_default;
 
   // --- Resolve talus map
 

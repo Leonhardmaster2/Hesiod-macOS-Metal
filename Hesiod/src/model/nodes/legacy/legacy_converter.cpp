@@ -8,6 +8,7 @@
 #include "meta/core/container_group.hpp"
 #include "meta/ext/array/array.hpp"
 #include "meta/ext/color_gradient/color_gradient.hpp"
+#include "meta/metadata/keys.hpp"
 
 #include "hesiod/app/hesiod_application.hpp"
 #include "hesiod/logger.hpp"
@@ -80,9 +81,98 @@ std::string resolve_legacy_group_name(const meta::ContainerGroup &group,
   if (label == "Voronoise")
     return "Voronoise";
 
-  // Path fractalize mappings
-  if (label == "PathFractalize")
+  // Bump mappings
+  if (label == "Bump")
+    return "Cosine";
+  if (label == "BumpLorentzian")
+    return "Lorentzian";
+
+  // Cone mappings
+  if (label == "Cone")
+    return "Simple";
+  if (label == "ConeComplex")
+    return "Complex";
+  if (label == "ConeSigmoid")
+    return "Sigmoid";
+
+  // Falloff mappings
+  if (label == "Falloff" || label == "FallOff")
+    return "Distance";
+  if (label == "ZeroedEdges")
+    return "Radial Profile";
+  if (label == "Bulkify")
+    return "Bulk";
+
+  // Path mappings
+  if (label == "PathResample" || label == "PathBezier" || label == "PathBezierRound" ||
+      label == "PathBspline" || label == "PathDecasteljau")
+    return "Interpolate";
+  if (label == "PathDecimate")
+    return "Decimate";
+  if (label == "PathSmooth")
+    return "Smooth";
+
+  if (label == "PathNoise" || label == "PathFractalize")
     return "Fractalize";
+  if (label == "PathMeanderize")
+    return "Meanderize";
+  if (label == "PathShuffle")
+    return "Shuffle";
+
+  if (label == "PathTransform" || label == "PathScale")
+    return "Scale";
+  if (label == "PathInflate")
+    return "Inflate";
+
+  // SelectValue mappings
+  if (label == "SelectInterval")
+    return "Interval";
+  if (label == "SelectThreshold")
+    return "Threshold";
+  if (label == "SelectValue")
+    return "Target";
+  if (label == "SelectMidrange")
+    return "Midrange";
+
+  // SelectSlope mappings
+  if (label == "SelectSlope")
+    return "Slope";
+  if (label == "SelectAngle")
+    return "Angle";
+  if (label == "SelectInwardOutward")
+    return "Inward / Outward";
+
+  // SelectCurvature mappings
+  if (label == "SelectCavities")
+    return "Cavities";
+  if (label == "SelectValley")
+    return "Valley";
+  if (label == "SelectBlobLog")
+    return "Blob (LoG)";
+
+  // SelectSoil mappings
+  if (label == "SelectSoilFlow")
+    return "Flow";
+  if (label == "SelectSoilRocks")
+    return "Rocks";
+  if (label == "SelectSoilWeathered")
+    return "Weathered";
+  if (label == "SelectRivers")
+    return "Rivers";
+
+  // RecastCliff mappings
+  if (label == "RecastCliff")
+    return "Isotropic";
+  if (label == "RecastCliffDirectional")
+    return "Directional";
+
+  // CloudSetValues mappings
+  if (label == "CloudSetValuesFromHeightmap")
+    return "From Heightmap";
+  if (label == "CloudSetValuesFromBorderDistance")
+    return "From Border Distance";
+  if (label == "CloudSetValuesFromMinDistance")
+    return "From Min Distance";
 
   if (group.current_container_name().has_value() &&
       group.contains(*group.current_container_name()))
@@ -216,11 +306,194 @@ nlohmann::json convert_legacy_node_json(const nlohmann::json &json_node)
     target_label = "CellularNoise";
     group_name = "Voronoise";
   }
-  // --- Path Fractalize ---
-  else if (label == "PathFractalize")
+  // --- Bump family ---
+  else if (label == "Bump")
   {
-    target_label = "PathFractalize";
+    target_label = "Bump";
+    group_name = "Cosine";
+  }
+  else if (label == "BumpLorentzian")
+  {
+    target_label = "Bump";
+    group_name = "Lorentzian";
+  }
+  // --- Cone family ---
+  else if (label == "Cone")
+  {
+    target_label = "Cone";
+    group_name = "Simple";
+  }
+  else if (label == "ConeComplex")
+  {
+    target_label = "Cone";
+    group_name = "Complex";
+  }
+  else if (label == "ConeSigmoid")
+  {
+    target_label = "Cone";
+    group_name = "Sigmoid";
+  }
+  // --- Falloff family ---
+  else if (label == "Falloff" || label == "FallOff")
+  {
+    target_label = "Falloff";
+    group_name = "Distance";
+  }
+  else if (label == "ZeroedEdges")
+  {
+    target_label = "Falloff";
+    group_name = "Radial Profile";
+  }
+  else if (label == "Bulkify")
+  {
+    target_label = "Falloff";
+    group_name = "Bulk";
+  }
+  // --- Path Resample family ---
+  else if (label == "PathResample" || label == "PathBezier" ||
+           label == "PathBezierRound" || label == "PathBspline" ||
+           label == "PathDecasteljau")
+  {
+    target_label = "PathResample";
+    group_name = "Interpolate";
+  }
+  else if (label == "PathDecimate")
+  {
+    target_label = "PathResample";
+    group_name = "Decimate";
+  }
+  else if (label == "PathSmooth")
+  {
+    target_label = "PathResample";
+    group_name = "Smooth";
+  }
+  // --- Path Noise family ---
+  else if (label == "PathNoise" || label == "PathFractalize")
+  {
+    target_label = "PathNoise";
     group_name = "Fractalize";
+  }
+  else if (label == "PathMeanderize")
+  {
+    target_label = "PathNoise";
+    group_name = "Meanderize";
+  }
+  else if (label == "PathShuffle")
+  {
+    target_label = "PathNoise";
+    group_name = "Shuffle";
+  }
+  // --- Path Transform family ---
+  else if (label == "PathTransform" || label == "PathScale")
+  {
+    target_label = "PathTransform";
+    group_name = "Scale";
+  }
+  else if (label == "PathInflate")
+  {
+    target_label = "PathTransform";
+    group_name = "Inflate";
+  }
+  // --- SelectValue family ---
+  else if (label == "SelectInterval")
+  {
+    target_label = "SelectValue";
+    group_name = "Interval";
+  }
+  else if (label == "SelectThreshold")
+  {
+    target_label = "SelectValue";
+    group_name = "Threshold";
+  }
+  else if (label == "SelectValue")
+  {
+    target_label = "SelectValue";
+    group_name = "Target";
+  }
+  else if (label == "SelectMidrange")
+  {
+    target_label = "SelectValue";
+    group_name = "Midrange";
+  }
+  // --- SelectSlope family ---
+  else if (label == "SelectSlope")
+  {
+    target_label = "SelectSlope";
+    group_name = "Slope";
+  }
+  else if (label == "SelectAngle")
+  {
+    target_label = "SelectSlope";
+    group_name = "Angle";
+  }
+  else if (label == "SelectInwardOutward")
+  {
+    target_label = "SelectSlope";
+    group_name = "Inward / Outward";
+  }
+  // --- SelectCurvature family ---
+  else if (label == "SelectCavities")
+  {
+    target_label = "SelectCurvature";
+    group_name = "Cavities";
+  }
+  else if (label == "SelectValley")
+  {
+    target_label = "SelectCurvature";
+    group_name = "Valley";
+  }
+  else if (label == "SelectBlobLog")
+  {
+    target_label = "SelectCurvature";
+    group_name = "Blob (LoG)";
+  }
+  // --- SelectSoil family ---
+  else if (label == "SelectSoilFlow")
+  {
+    target_label = "SelectSoil";
+    group_name = "Flow";
+  }
+  else if (label == "SelectSoilRocks")
+  {
+    target_label = "SelectSoil";
+    group_name = "Rocks";
+  }
+  else if (label == "SelectSoilWeathered")
+  {
+    target_label = "SelectSoil";
+    group_name = "Weathered";
+  }
+  else if (label == "SelectRivers")
+  {
+    target_label = "SelectSoil";
+    group_name = "Rivers";
+  }
+  // --- RecastCliff family ---
+  else if (label == "RecastCliff")
+  {
+    target_label = "RecastCliff";
+    group_name = "Isotropic";
+  }
+  else if (label == "RecastCliffDirectional")
+  {
+    target_label = "RecastCliff";
+    group_name = "Directional";
+  }
+  // --- CloudSetValues family ---
+  else if (label == "CloudSetValuesFromHeightmap")
+  {
+    target_label = "CloudSetValues";
+    group_name = "From Heightmap";
+  }
+  else if (label == "CloudSetValuesFromBorderDistance")
+  {
+    target_label = "CloudSetValues";
+    group_name = "From Border Distance";
+  }
+  else if (label == "CloudSetValuesFromMinDistance")
+  {
+    target_label = "CloudSetValues";
+    group_name = "From Min Distance";
   }
   // --- SetBorders ---
   else if (label == "SetBorders")
@@ -248,6 +521,139 @@ nlohmann::json convert_legacy_node_json(const nlohmann::json &json_node)
     rename_out_to_output(converted_node, "SetBorders");
     return converted_node;
   }
+  // --- Morphology family -> MorphologicalOperators ---
+  else if (label == "Border" || label == "Closing" || label == "Dilation" ||
+           label == "Erosion" || label == "Opening" || label == "MorphologicalTopHat" ||
+           label == "MorphologicalGradient")
+  {
+    nlohmann::json converted_node = json_node;
+    converted_node["label"] = "MorphologicalOperators";
+    int op_val = 0;
+    if (label == "Border")
+      op_val = 0;
+    else if (label == "Closing")
+      op_val = 1;
+    else if (label == "Dilation")
+      op_val = 2;
+    else if (label == "Erosion")
+      op_val = 3;
+    else if (label == "Opening")
+      op_val = 4;
+    else if (label == "MorphologicalTopHat")
+      op_val = 6;
+    else if (label == "MorphologicalGradient")
+      op_val = 7;
+
+    if (converted_node.contains("containers") && converted_node["containers"].is_object())
+    {
+      for (auto &[cname, cjson] : converted_node["containers"].items())
+      {
+        if (cjson.is_object())
+          cjson["operator"] = {{"value", op_val}};
+      }
+    }
+    else
+    {
+      converted_node["operator"] = {{"value", op_val}};
+    }
+    rename_out_to_output(converted_node, "MorphologicalOperators");
+    return converted_node;
+  }
+  // --- Curvature family -> Curvatures ---
+  else if (label == "CurvatureMean" || label == "AccumulationCurvature" ||
+           label == "ShapeIndex" || label == "Unsphericity")
+  {
+    nlohmann::json converted_node = json_node;
+    converted_node["label"] = "Curvatures";
+    int ctype_val = 2;
+    if (label == "CurvatureMean")
+      ctype_val = 2;
+    else if (label == "AccumulationCurvature")
+      ctype_val = 7;
+    else if (label == "ShapeIndex")
+      ctype_val = 8;
+    else if (label == "Unsphericity")
+      ctype_val = 9;
+
+    if (converted_node.contains("containers") && converted_node["containers"].is_object())
+    {
+      for (auto &[cname, cjson] : converted_node["containers"].items())
+      {
+        if (cjson.is_object())
+          cjson["ctype"] = {{"value", ctype_val}};
+      }
+    }
+    else
+    {
+      converted_node["ctype"] = {{"value", ctype_val}};
+    }
+    return converted_node;
+  }
+  // --- Local Metrics family -> LocalMetrics ---
+  else if (label == "RelativeElevation" || label == "Ruggedness")
+  {
+    nlohmann::json converted_node = json_node;
+    converted_node["label"] = "LocalMetrics";
+    int metric_val = 10;
+    if (label == "RelativeElevation")
+      metric_val = 10;
+    else if (label == "Ruggedness")
+      metric_val = 12;
+
+    if (converted_node.contains("containers") && converted_node["containers"].is_object())
+    {
+      for (auto &[cname, cjson] : converted_node["containers"].items())
+      {
+        if (cjson.is_object())
+          cjson["metric"] = {{"value", metric_val}};
+      }
+    }
+    else
+    {
+      converted_node["metric"] = {{"value", metric_val}};
+    }
+    return converted_node;
+  }
+  // --- Terrace -> StrataTerrace ---
+  else if (label == "Terrace")
+  {
+    nlohmann::json converted_node = json_node;
+    converted_node["label"] = "StrataTerrace";
+
+    auto remap_terrace_params = [](nlohmann::json &cjson)
+    {
+      if (cjson.contains("nlevels") && !cjson.contains("kz"))
+      {
+        cjson["kz"] = cjson["nlevels"];
+        cjson.erase("nlevels");
+      }
+      if (cjson.contains("gain") && !cjson.contains("gamma"))
+      {
+        cjson["gamma"] = cjson["gain"];
+        cjson.erase("gain");
+      }
+      if (cjson.contains("noise_ratio") && !cjson.contains("gamma_noise_ratio"))
+      {
+        cjson["gamma_noise_ratio"] = cjson["noise_ratio"];
+        cjson.erase("noise_ratio");
+      }
+    };
+
+    if (converted_node.contains("containers") && converted_node["containers"].is_object())
+    {
+      for (auto &[cname, cjson] : converted_node["containers"].items())
+      {
+        if (cjson.is_object())
+          remap_terrace_params(cjson);
+      }
+    }
+    else
+    {
+      remap_terrace_params(converted_node);
+    }
+    rename_out_to_output(converted_node, "StrataTerrace");
+    return converted_node;
+  }
 
   if (target_label.empty() || group_name.empty())
   {
@@ -258,7 +664,6 @@ nlohmann::json convert_legacy_node_json(const nlohmann::json &json_node)
 
   nlohmann::json converted_node = json_node;
   converted_node["label"] = target_label;
-  converted_node["current"] = group_name;
 
   // If the node already has a "containers" object
   if (converted_node.contains("containers") && converted_node["containers"].is_object())
@@ -278,10 +683,12 @@ nlohmann::json convert_legacy_node_json(const nlohmann::json &json_node)
           main_json["lacunarity"] = {{"value", 2.0f}};
       }
       converted_node["containers"][group_name] = main_json;
+      converted_node["current"] = group_name;
     }
   }
   else
   {
+    converted_node["current"] = group_name;
     // Legacy format: flat attributes at the node level
     static const std::unordered_set<std::string> node_keys = {"id",
                                                               "label",
@@ -336,10 +743,19 @@ nlohmann::json convert_legacy_node_json(const nlohmann::json &json_node)
 nlohmann::json convert_legacy_attribute_json(const meta::AbstractAttribute *attr,
                                              const nlohmann::json          &j)
 {
-  if (!j.is_object() || !attr)
+  if (!attr)
     return j;
 
   nlohmann::json converted = j;
+  if (j.is_array() || j.is_number() || j.is_string() || j.is_boolean())
+  {
+    converted = nlohmann::json::object();
+    converted["value"] = j;
+  }
+  else if (!j.is_object())
+  {
+    return j;
+  }
 
   // Cloud conversion: meta::Attribute<std::vector<glm::vec3>>
   if (attr->try_cast<meta::Attribute<std::vector<glm::vec3>>>())
@@ -380,6 +796,10 @@ nlohmann::json convert_legacy_attribute_json(const meta::AbstractAttribute *attr
       {
         Logger::log()->warn("Legacy converter: Vec2 conversion failed: {}", e.what());
       }
+    }
+    else if (!j.contains("value") && j.contains("x") && j.contains("y"))
+    {
+      converted["value"] = {{"x", j["x"]}, {"y", j["y"]}};
     }
   }
   // Color conversion: meta::Attribute<glm::vec4>
@@ -483,14 +903,70 @@ nlohmann::json convert_legacy_attribute_json(const meta::AbstractAttribute *attr
     }
   }
 
-  // Translate legacy metadata fields to Meta's native metadata structure
+  // Translate legacy metadata and state fields
   if (j.contains("is_active"))
   {
-    converted["metadata"]["ui.active"]["value"] = j["is_active"];
+    converted["state"][meta::keys::state::active]["value"] = j["is_active"];
   }
   if (j.contains("link_xy"))
   {
-    converted["metadata"]["ui.locked_xy"]["value"] = j["link_xy"];
+    converted["state"][meta::keys::state::locked_xy]["value"] = j["link_xy"];
+  }
+  if (j.contains("state") && j["state"].is_object())
+  {
+    if (j["state"].contains("active"))
+    {
+      if (!j["state"]["active"].is_object())
+        converted["state"][meta::keys::state::active] = {{"value", j["state"]["active"]}};
+      else
+        converted["state"][meta::keys::state::active] = j["state"]["active"];
+    }
+    if (j["state"].contains(meta::keys::state::active))
+    {
+      if (!j["state"][meta::keys::state::active].is_object())
+        converted["state"][meta::keys::state::active] = {
+            {"value", j["state"][meta::keys::state::active]}};
+      else
+        converted["state"][meta::keys::state::active] = j["state"]
+                                                         [meta::keys::state::active];
+    }
+    if (j["state"].contains("locked_xy"))
+    {
+      if (!j["state"]["locked_xy"].is_object())
+        converted["state"][meta::keys::state::locked_xy] = {
+            {"value", j["state"]["locked_xy"]}};
+      else
+        converted["state"][meta::keys::state::locked_xy] = j["state"]["locked_xy"];
+    }
+    if (j["state"].contains(meta::keys::state::locked_xy))
+    {
+      if (!j["state"][meta::keys::state::locked_xy].is_object())
+        converted["state"][meta::keys::state::locked_xy] = {
+            {"value", j["state"][meta::keys::state::locked_xy]}};
+      else
+        converted["state"]
+                 [meta::keys::state::locked_xy] = j["state"]
+                                                   [meta::keys::state::locked_xy];
+    }
+  }
+  if (j.contains("metadata") && j["metadata"].is_object())
+  {
+    if (j["metadata"].contains("ui.active"))
+    {
+      auto ui_act = j["metadata"]["ui.active"];
+      if (ui_act.is_object() && ui_act.contains("value"))
+        converted["state"][meta::keys::state::active]["value"] = ui_act["value"];
+      else if (ui_act.is_boolean())
+        converted["state"][meta::keys::state::active]["value"] = ui_act;
+    }
+    if (j["metadata"].contains("ui.locked_xy"))
+    {
+      auto ui_lock = j["metadata"]["ui.locked_xy"];
+      if (ui_lock.is_object() && ui_lock.contains("value"))
+        converted["state"][meta::keys::state::locked_xy]["value"] = ui_lock["value"];
+      else if (ui_lock.is_boolean())
+        converted["state"][meta::keys::state::locked_xy]["value"] = ui_lock;
+    }
   }
 
   return converted;
@@ -623,6 +1099,156 @@ nlohmann::json convert_legacy_container_group_json(const meta::ContainerGroup &g
 
   group_json["containers"][target_container_name] = target_container_json;
   return group_json;
+}
+
+static bool is_path_modifier_node(const std::string &label)
+{
+  return label == "PathResample" || label == "PathBezier" || label == "PathBezierRound" ||
+         label == "PathBspline" || label == "PathDecasteljau" ||
+         label == "PathDecimate" || label == "PathSmooth" || label == "PathNoise" ||
+         label == "PathFractalize" || label == "PathMeanderize" ||
+         label == "PathShuffle" || label == "PathTransform" || label == "PathScale" ||
+         label == "PathInflate";
+}
+
+static bool is_mask_output_node(const std::string &label)
+{
+  return label == "CurvatureMean" || label == "AccumulationCurvature" ||
+         label == "ShapeIndex" || label == "Unsphericity" ||
+         label == "RelativeElevation" || label == "Ruggedness";
+}
+
+nlohmann::json convert_legacy_graph_json(const nlohmann::json &graph_json)
+{
+  if (!graph_json.is_object())
+    return graph_json;
+
+  nlohmann::json                               converted_graph = graph_json;
+  std::unordered_map<std::string, std::string> node_labels;
+
+  if (converted_graph.contains("nodes") && converted_graph["nodes"].is_array())
+  {
+    for (auto &json_node : converted_graph["nodes"])
+    {
+      std::string id = "";
+      std::string label = "";
+      if (json_node.contains("id") && json_node["id"].is_string())
+        id = json_node["id"].get<std::string>();
+      if (json_node.contains("label") && json_node["label"].is_string())
+        label = json_node["label"].get<std::string>();
+
+      node_labels[id] = label;
+      json_node = convert_legacy_node_json(json_node);
+    }
+  }
+
+  if (converted_graph.contains("links") && converted_graph["links"].is_array())
+  {
+    for (auto &json_link : converted_graph["links"])
+    {
+      if (!json_link.is_object())
+        continue;
+
+      std::string node_id_from = json_link.value("node_id_from", "");
+      std::string port_id_from = json_link.value("port_id_from", "");
+      std::string node_id_to = json_link.value("node_id_to", "");
+      std::string port_id_to = json_link.value("port_id_to", "");
+
+      std::string from_label = node_labels[node_id_from];
+      std::string to_label = node_labels[node_id_to];
+
+      if (is_mask_output_node(from_label) &&
+          (port_id_from == "out" || port_id_from == "output"))
+      {
+        json_link["port_id_from"] = "mask";
+      }
+      else if (port_id_from == "out")
+      {
+        json_link["port_id_from"] = "output";
+      }
+      else if (port_id_from == "path" && is_path_modifier_node(from_label))
+      {
+        json_link["port_id_from"] = "output";
+      }
+
+      if (port_id_to == "in")
+      {
+        json_link["port_id_to"] = "input";
+      }
+      else if (port_id_to == "path" && is_path_modifier_node(to_label))
+      {
+        json_link["port_id_to"] = "input";
+      }
+    }
+  }
+
+  return converted_graph;
+}
+
+nlohmann::json convert_legacy_graph_widget_json(const nlohmann::json &widget_json)
+{
+  if (!widget_json.is_object())
+    return widget_json;
+
+  nlohmann::json                               converted_widget = widget_json;
+  std::unordered_map<std::string, std::string> node_captions;
+
+  if (converted_widget.contains("nodes") && converted_widget["nodes"].is_array())
+  {
+    for (const auto &json_node : converted_widget["nodes"])
+    {
+      std::string id = "";
+      std::string caption = "";
+      if (json_node.contains("id") && json_node["id"].is_string())
+        id = json_node["id"].get<std::string>();
+      if (json_node.contains("caption") && json_node["caption"].is_string())
+        caption = json_node["caption"].get<std::string>();
+
+      node_captions[id] = caption;
+    }
+  }
+
+  if (converted_widget.contains("links") && converted_widget["links"].is_array())
+  {
+    for (auto &json_link : converted_widget["links"])
+    {
+      if (!json_link.is_object())
+        continue;
+
+      std::string node_out_id = json_link.value("node_out_id", "");
+      std::string port_out_id = json_link.value("port_out_id", "");
+      std::string node_in_id = json_link.value("node_in_id", "");
+      std::string port_in_id = json_link.value("port_in_id", "");
+
+      std::string from_label = node_captions[node_out_id];
+      std::string to_label = node_captions[node_in_id];
+
+      if (is_mask_output_node(from_label) &&
+          (port_out_id == "out" || port_out_id == "output"))
+      {
+        json_link["port_out_id"] = "mask";
+      }
+      else if (port_out_id == "out")
+      {
+        json_link["port_out_id"] = "output";
+      }
+      else if (port_out_id == "path" && is_path_modifier_node(from_label))
+      {
+        json_link["port_out_id"] = "output";
+      }
+
+      if (port_in_id == "in")
+      {
+        json_link["port_in_id"] = "input";
+      }
+      else if (port_in_id == "path" && is_path_modifier_node(to_label))
+      {
+        json_link["port_in_id"] = "input";
+      }
+    }
+  }
+
+  return converted_widget;
 }
 
 } // namespace hesiod

@@ -84,10 +84,10 @@ void compute_coastal_erosion_profile_node(BaseNode &node)
 
   // --- Inputs / Outputs
 
-  auto *p_z     = node.get_value_ref<hmap::VirtualArray>(P_Z_IN);
-  auto *p_depth = node.get_value_ref<hmap::VirtualArray>(P_DEPTH_IN);
-  auto *p_noise = node.get_value_ref<hmap::VirtualArray>(P_NOISE);
-  auto *p_mask  = node.get_value_ref<hmap::VirtualArray>(P_MASK);
+  const auto *p_z     = node.get_value_ref<hmap::VirtualArray>(P_Z_IN);
+  const auto *p_depth = node.get_value_ref<hmap::VirtualArray>(P_DEPTH_IN);
+  const auto *p_noise = node.get_value_ref<hmap::VirtualArray>(P_NOISE);
+  const auto *p_mask  = node.get_value_ref<hmap::VirtualArray>(P_MASK);
 
   auto *p_z_out      = node.get_value_ref<hmap::VirtualArray>(P_Z_OUT);
   auto *p_depth_out  = node.get_value_ref<hmap::VirtualArray>(P_DEPTH_OUT);
@@ -115,7 +115,7 @@ void compute_coastal_erosion_profile_node(BaseNode &node)
 
   // --- Prepare mask
 
-  std::shared_ptr<hmap::VirtualArray> sp_mask = pre_process_mask(node, p_mask, *p_z);
+  hmap::VirtualArray mask_default = pre_process_mask(node, p_mask, *p_z);
 
   // --- Resolve default noise
 
@@ -127,12 +127,13 @@ void compute_coastal_erosion_profile_node(BaseNode &node)
   hmap::for_each_tile(
       {p_z, p_depth, p_noise, p_mask},
       {p_z_out, p_depth_out, p_shore_mask, p_scarp_mask},
-      [&](std::vector<const hmap::Array *> in,
-          std::vector<hmap::Array *>       out,
+      [&](std::vector<const hmap::Array *> p_arrays_in,
+          std::vector<hmap::Array *>       p_arrays_out,
           const hmap::TileRegion &)
       {
-        auto [pa_z, pa_depth, pa_noise, pa_mask]                    = unpack<4>(in);
-        auto [pa_z_out, pa_depth_out, pa_shore_mask, pa_scarp_mask] = unpack<4>(out);
+        auto [pa_z, pa_depth, pa_noise, pa_mask] = unpack<4>(p_arrays_in);
+        auto [pa_z_out, pa_depth_out, pa_shore_mask, pa_scarp_mask] = unpack<4>(
+            p_arrays_out);
 
         *pa_z_out     = *pa_z;
         *pa_depth_out = *pa_depth;
@@ -157,10 +158,10 @@ void compute_coastal_erosion_profile_node(BaseNode &node)
 
   // --- Post-process
 
-  p_z_out->smooth_overlap_buffers();
-  p_depth_out->smooth_overlap_buffers();
-  p_shore_mask->smooth_overlap_buffers();
-  p_scarp_mask->smooth_overlap_buffers();
+  p_z_out->sync_overlap_buffers();
+  p_depth_out->sync_overlap_buffers();
+  p_shore_mask->sync_overlap_buffers();
+  p_scarp_mask->sync_overlap_buffers();
 }
 
 } // namespace hesiod

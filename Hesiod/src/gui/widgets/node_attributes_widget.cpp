@@ -2,6 +2,7 @@
  * Public License. The full license is in the file LICENSE, distributed with
  * this software. */
 #include <fstream>
+#include <regex>
 
 #include <QAction>
 #include <QApplication>
@@ -13,6 +14,7 @@
 #include <QStyle>
 #include <QToolButton>
 
+#include "meta/metadata/keys.hpp"
 #include "meta_qt/container_group_widget.hpp"
 #include "meta_qt/ui/design_registry.hpp"
 #include "meta_qt/ui/theme.hpp"
@@ -416,6 +418,28 @@ void NodeAttributesWidget::setup_layout()
   if (this->add_toolbar)
     main_layout->addWidget(this->create_toolbar());
 
+  // --- position pickers (XY canvases) take the shape of the domain: a 2:1
+  // graph gets a 2:1 plane, so a point sits where it will in the terrain
+
+  if (const GraphConfig *config = gno->get_config_ref())
+    if (config->shape.x > 0 && config->shape.y > 0)
+    {
+      const float aspect = float(config->shape.x) / float(config->shape.y);
+      for (auto &[name, container] : p_node->get_meta_group().containers())
+        for (auto &[key, attr] : *container)
+        {
+          auto              &md = attr->metadata();
+          const std::string *type = md.try_value<std::string>(
+              meta::keys::ui::widget_type);
+          if (!type || *type != "XYCanvas")
+            continue;
+          if (float *value = md.try_value<float>(meta::keys::ui::plane_aspect))
+            *value = aspect;
+          else
+            md.add(std::string(meta::keys::ui::plane_aspect), aspect);
+        }
+    }
+
   // --- Meta ContainerGroupWidget
 
   // Registers the designs on first call and validates the configured name.
@@ -461,7 +485,9 @@ void NodeAttributesWidget::setup_layout()
       // second card, which reads as nested boxes rather than grouping.
       .root_category_name = (panel.has_own_chrome && !has_categorised_attributes(*p_node))
                                 ? std::string{"Parameters"}
-                                : std::string{}};
+                                : std::string{},
+      .collapse_regex = std::regex(
+          "Post-Process.*|Default Noise|Default Mask Definition|Advanced")};
 
   this->meta_widget = meta::qt::render(p_node->get_meta_group(),
                                        options,

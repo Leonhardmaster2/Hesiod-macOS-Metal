@@ -94,9 +94,9 @@ void compute_colorize_bivariate_node(BaseNode &node)
 
   // --- Params
 
-  const auto &gradient1  = node.val<meta::ColorGradient>(A_GRADIENT1).value();
-  const auto &gradient2  = node.val<meta::ColorGradient>(A_GRADIENT2).value();
-  const auto  mix_method = static_cast<hmap::MixMethod>(node.val<int>(A_MIX_METHOD));
+  const auto &gradient1         = node.val<meta::ColorGradient>(A_GRADIENT1).value();
+  const auto &gradient2         = node.val<meta::ColorGradient>(A_GRADIENT2).value();
+  const auto  mix_method        = node.val_enum<hmap::MixMethod>(A_MIX_METHOD);
   const auto  reverse_colormap1 = node.val<bool>(A_REVERSE_COLORMAP1);
   const auto  reverse_colormap2 = node.val<bool>(A_REVERSE_COLORMAP2);
   const auto  sat_perc1         = 0.01f * node.val<float>(A_SAT_PERC1);
@@ -160,18 +160,16 @@ void compute_colorize_bivariate_node(BaseNode &node)
     float denom1 = (range1.y != range1.x) ? (range1.y - range1.x) : 1.f;
     float denom2 = (range2.y != range2.x) ? (range2.y - range2.x) : 1.f;
 
-    std::vector<hmap::VirtualArray *> ptrs = {&in1_processed,
-                                              &in2_processed,
-                                              p_in1,
-                                              p_in2,
-                                              p_noise};
-
     hmap::for_each_tile(
-        ptrs,
-        [range1, range2, denom1, denom2, sharpness](std::vector<hmap::Array *> p_arrays,
-                                                    const hmap::TileRegion    &region)
+        {p_in1, p_in2, p_noise},
+        {&in1_processed, &in2_processed},
+        [range1, range2, denom1, denom2, sharpness](
+            std::vector<const hmap::Array *> p_arrays_in,
+            std::vector<hmap::Array *>       p_arrays_out,
+            const hmap::TileRegion          &region)
         {
-          auto [pa_out1, pa_out2, pa_in1, pa_in2, pa_noise] = unpack<5>(p_arrays);
+          auto [pa_in1, pa_in2, pa_noise] = unpack<3>(p_arrays_in);
+          auto [pa_out1, pa_out2]         = unpack<2>(p_arrays_out);
 
           for (int j = 0; j < region.shape.y; ++j)
           {

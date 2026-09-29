@@ -11,7 +11,6 @@
 #include <utility>
 
 #include "gnode/node.hpp"
-#include "gnodegui/node_proxy.hpp"
 
 #include "meta/core/container_group.hpp"
 
@@ -51,12 +50,14 @@ public:
   // --- Runtime info ---
   NodeRuntimeInfo get_runtime_info() const;
   float           get_memory_usage() const;
+  std::string     runtime_info_to_string(const char separator = ',') const;
   void            update_runtime_info(NodeRuntimeStep step);
 
   // --- Identification ---
   std::string get_id() const;
   void        set_id(const std::string &new_id);
   std::string get_category() const;
+  std::string get_comment() const;
   void        set_comment(const std::string &new_comment);
   std::string get_node_type() const;
 
@@ -76,20 +77,34 @@ public:
   std::string    get_documentation_short_html() const;
   void           update_attributes_tool_tip();
 
-  // --- Proxy (most of it) ---
-  std::string     get_caption() const;
-  std::string     get_comment() const;
-  void           *get_data_ref(int port_index);
-  std::string     get_data_type(int port_index) const;
-  int             get_nports() const;
-  std::string     get_port_caption(int port_index) const;
-  gngui::PortType get_port_type(int port_index) const;
-  std::string     get_tool_tip_text();
+  using gnode::Node::get_port_type;
+  gnode::PortType get_port_type(int port_index) const;
 
   // --- Meta Accessors & Helpers ---
   template <typename T> decltype(auto) val(const std::string &key) const
   {
     return this->get_meta_group().current().value<T>(key);
+  }
+
+  template <typename T> T val_enum(const std::string &key) const
+  {
+    return static_cast<T>(this->val<int>(key));
+  }
+
+  glm::vec2 val_wavenumber(const std::string &key) const
+  {
+    return this->cfg().scale_wavenumber(this->val<glm::vec2>(key));
+  }
+
+  int val_pixel_radius(const std::string &key, int min_val = 1) const
+  {
+    return std::max(min_val,
+                    static_cast<int>(this->val<float>(key) * this->cfg().shape.x));
+  }
+
+  int val_radius(const std::string &key, int min_val = 1) const
+  {
+    return this->val_pixel_radius(key, min_val);
   }
 
   template <typename T> void set_value(const std::string &key, T new_value)
@@ -225,18 +240,5 @@ void setup_background_image_for_cloud_attribute(BaseNode          &node,
 void setup_histogram_for_range_attribute(BaseNode          &node,
                                          const std::string &attribute_key,
                                          const std::string &port_id);
-
-// unpack vectors
-template <std::size_t N, typename T, std::size_t... Is>
-auto unpack_impl(const std::vector<T *> &v, std::index_sequence<Is...>)
-{
-  assert(v.size() >= N);
-  return std::make_tuple(v[Is]...);
-}
-
-template <std::size_t N, typename T> auto unpack(const std::vector<T *> &v)
-{
-  return unpack_impl<N>(v, std::make_index_sequence<N>{});
-}
 
 } // namespace hesiod

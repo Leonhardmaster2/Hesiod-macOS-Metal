@@ -56,9 +56,9 @@ void compute_gain_node(BaseNode &node)
 
   // --- Inputs / Outputs
 
-  auto *p_in   = node.get_value_ref<hmap::VirtualArray>(P_IN);
-  auto *p_mask = node.get_value_ref<hmap::VirtualArray>(P_MASK);
-  auto *p_out  = node.get_value_ref<hmap::VirtualArray>(P_OUT);
+  const auto *p_in   = node.get_value_ref<hmap::VirtualArray>(P_IN);
+  const auto *p_mask = node.get_value_ref<hmap::VirtualArray>(P_MASK);
+  auto       *p_out  = node.get_value_ref<hmap::VirtualArray>(P_OUT);
 
   if (!p_in)
     return;
@@ -69,7 +69,9 @@ void compute_gain_node(BaseNode &node)
 
   // --- Prepare mask
 
-  std::shared_ptr<hmap::VirtualArray> sp_mask = pre_process_mask(node, p_mask, *p_in);
+  hmap::VirtualArray mask_default = pre_process_mask(node, p_mask, *p_in);
+  if (!mask_default.empty())
+    p_mask = &mask_default;
 
   // --- Compute
 
@@ -79,12 +81,12 @@ void compute_gain_node(BaseNode &node)
   hmap::for_each_tile(
       {p_in, p_mask},
       {p_out},
-      [&](std::vector<const hmap::Array *> in,
-          std::vector<hmap::Array *>       out,
+      [&](std::vector<const hmap::Array *> p_arrays_in,
+          std::vector<hmap::Array *>       p_arrays_out,
           const hmap::TileRegion &)
       {
-        auto [pa_in, pa_mask] = unpack<2>(in);
-        auto [pa_out]         = unpack<1>(out);
+        auto [pa_in, pa_mask] = unpack<2>(p_arrays_in);
+        auto [pa_out]         = unpack<1>(p_arrays_out);
 
         *pa_out = *pa_in;
 

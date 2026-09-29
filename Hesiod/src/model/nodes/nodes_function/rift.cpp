@@ -95,12 +95,12 @@ void compute_rift_node(BaseNode &node)
 
   // --- Inputs / Outputs
 
-  auto *p_dr    = node.get_value_ref<hmap::VirtualArray>(P_DR);
-  auto *p_ds    = node.get_value_ref<hmap::VirtualArray>(P_DS);
-  auto *p_env   = node.get_value_ref<hmap::VirtualArray>(P_ENV);
-  auto *p_out   = node.get_value_ref<hmap::VirtualArray>(P_OUT);
-  auto *p_rmask = node.get_value_ref<hmap::VirtualArray>(P_RIFT_MASK);
-  auto *p_bmask = node.get_value_ref<hmap::VirtualArray>(P_BOTTOM_MASK);
+  const auto *p_dr    = node.get_value_ref<hmap::VirtualArray>(P_DR);
+  const auto *p_ds    = node.get_value_ref<hmap::VirtualArray>(P_DS);
+  const auto *p_env   = node.get_value_ref<hmap::VirtualArray>(P_ENV);
+  auto       *p_out   = node.get_value_ref<hmap::VirtualArray>(P_OUT);
+  auto       *p_rmask = node.get_value_ref<hmap::VirtualArray>(P_RIFT_MASK);
+  auto       *p_bmask = node.get_value_ref<hmap::VirtualArray>(P_BOTTOM_MASK);
 
   if (!p_out)
     return;
@@ -113,11 +113,11 @@ void compute_rift_node(BaseNode &node)
   const auto axial_slope            =  node.val<float>(A_AXIAL_SLOPE);
   const auto depth                  = node.val<float>(A_DEPTH);
   const auto scale_with_depth       = node.val<bool>(A_SCALE_WITH_DEPTH);
-  const auto profile                = hmap::RadialProfile(node.val<int>(A_PROFILE));
+  const auto profile                = node.val_enum<hmap::RadialProfile>(A_PROFILE);
   const auto profile_param          = node.val<float>(A_PROFILE_PARAM);
   const auto bottom_extent          = node.val<float>(A_BOTTOM_EXTENT);
   const auto bottom_depth           = node.val<float>(A_BOTTOM_DEPTH);
-  const auto bottom_profile         = hmap::RadialProfile(node.val<int>(A_BOTTOM_PROFILE));
+  const auto bottom_profile         = node.val_enum<hmap::RadialProfile>(A_BOTTOM_PROFILE);
   const auto bottom_profile_param   = node.val<float>(A_BOTTOM_PROFILE_PARAM);
   const auto bottom_force_min_depth = node.val<bool>(A_BOTTOM_MIN_DEPTH); 
   const auto outer_slope            = node.val<float>(A_OUTER_SLOPE);
@@ -134,12 +134,12 @@ void compute_rift_node(BaseNode &node)
   hmap::for_each_tile(
       {p_dr, p_ds},
       {p_out, p_rmask, p_bmask},
-      [&](std::vector<const hmap::Array *> in,
-          std::vector<hmap::Array *>       out,
+      [&](std::vector<const hmap::Array *> p_arrays_in,
+          std::vector<hmap::Array *>       p_arrays_out,
           const hmap::TileRegion          &region)
       {
-        auto [pa_dr, pa_ds]               = unpack<2>(in);
-        auto [pa_out, pa_rmask, pa_bmask] = unpack<3>(out);
+        auto [pa_dr, pa_ds]               = unpack<2>(p_arrays_in);
+        auto [pa_out, pa_rmask, pa_bmask] = unpack<3>(p_arrays_out);
 
         *pa_out = hmap::rift(region.shape,
                              angle,

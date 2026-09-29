@@ -60,20 +60,31 @@ void setup_hydraulic_saleve_node(BaseNode &node)
 
   // attribute(s)
   // clang-format off
+  node.set_current_category("Stream Power Erosion");
   add_seed(node, A_SEED, "Seed");
+  add_float(node, A_STRENGTH, "Erosion Strength", 0.7f, 0.f, 1.f);
   add_float(node, A_M_EXP, "Drainage Exponent", 0.15f, 0.01f, 0.8f);
   add_float(node, A_DRAINAGE_NOISE_STRENGTH, "Drainage Noise Strength", 0.1f, 0.f, 1.f);
   add_float(node, A_UPLIFT_RATE, "Uplift Rate", 1.f, 0.1f, 1.f);
+
+  node.set_current_category("Slope Constraints");
   add_bool(node, A_UNIFORM_SMAX, "Uniform Slope Limiter", false);
   add_float(node, A_SMAX, "Maximum Slope (Domain Center)", 6.f, 0.f, FLT_MAX);
   add_float(node, A_SMIN, "Minimum Slope (Domain Border)", 0.f, 0.f, FLT_MAX);
-  add_float(node, A_STRENGTH, "Erosion Strength", 0.7f, 0.f, 1.f);
+
+  node.set_current_category("Shape Preservation");
   add_bool(node, A_SCALE_ERODIBILITY_WITH_Z, "Terrain Shape Preservation", true);
   add_float(node, A_ERODIBILITY_DISTRIB_EXP, "Shape Preservation Strength", 2.f, 0.1f, 4.f);
+
+  node.set_current_category("Sediment Deposition");
   add_float(node, A_DEPOSITION_RADIUS, "Deposition Radius", 0.1f, 0.f, 0.5f);
   add_float(node, A_DEPOSITION_STRENGTH, "Sediment Deposition Strength", 0.5f, 0.f, 1.f);
+
+  node.set_current_category("Fine Stream Erosion");
   add_float(node, A_STREAM_EXP, "Influence Exponent", 0.8f, 0.01f, 1.f);
   add_float(node, A_STREAM_STRENGTH, "Fine Erosion Strength", 0.02f, 0.f, 1.f);
+
+  node.set_current_category("Mesh & Solver");
   add_int(node, A_CONTROL_POINTS_COUNT, "Control Points Count", 15000, 500, 100000);
   add_float(node, A_TOLERANCE, "Convergence Tolerance", 1e-3f, 1e-5f, 1e-1f, "{:.2e}", /* log */ true);
   add_int(node, A_MAX_ITERATIONS, "Max. Iterations", 500, 1, 1000);
@@ -96,78 +107,38 @@ void compute_hydraulic_saleve_node(BaseNode &node)
 {
   Logger::log()->trace("computing node [{}]/[{}]", node.get_label(), node.get_id());
 
-  auto  p_in   = node.get_value_ref<hmap::VirtualArray>(P_IN);
-  auto  p_dx   = node.get_value_ref<hmap::VirtualArray>(P_DX);
-  auto  p_dy   = node.get_value_ref<hmap::VirtualArray>(P_DY);
-  auto *p_mask = node.get_value_ref<hmap::VirtualArray>(P_MASK);
-  auto  p_out  = node.get_value_ref<hmap::VirtualArray>(P_OUT);
+  const auto *p_in   = node.get_value_ref<hmap::VirtualArray>(P_IN);
+  const auto *p_dx   = node.get_value_ref<hmap::VirtualArray>(P_DX);
+  const auto *p_dy   = node.get_value_ref<hmap::VirtualArray>(P_DY);
+  const auto *p_mask = node.get_value_ref<hmap::VirtualArray>(P_MASK);
+  auto       *p_out  = node.get_value_ref<hmap::VirtualArray>(P_OUT);
 
   if (!p_in)
     return;
 
-  // --- Params lambda
+  // --- Params
 
-  const auto params = [&node, p_out]()
-  {
-    struct P
-    {
-      uint                        seed;
-      size_t                      count;
-      float                       m_exp;
-      float                       drainage_noise_strength;
-      float                       uplift_rate;
-      float                       tolerance;
-      int                         max_iterations;
-      bool                        uniform_smax;
-      float                       smin;
-      float                       smax;
-      float                       strength;
-      bool                        scale_erodibility_with_z;
-      float                       erodibility_distrib_exp;
-      int                         deposition_ir;
-      float                       deposition_strength;
-      float                       stream_strength;
-      float                       stream_exp;
-      hmap::InterpolationMethod2D itp_method;
-      bool                        enable_post_smoothing;
-    };
-
-    int   nx            = p_out->shape.x;
-    int   deposition_ir = (int)(node.val<float>(A_DEPOSITION_RADIUS) * nx);
-    bool  uniform_smax  = node.val<bool>(A_UNIFORM_SMAX);
-    float smax          = node.val<float>(A_SMAX);
-    float smin          = uniform_smax ? smax : node.val<float>(A_SMIN);
-
-    std::string                 itp_choice = node.val<std::string>(A_ITP_METHOD);
-    hmap::InterpolationMethod2D itp_method;
-    if (itp_choice == "Natural Neighbors")
-      itp_method = hmap::InterpolationMethod2D::ITP2D_NNI;
-    else
-      itp_method = hmap::InterpolationMethod2D::ITP2D_DELAUNAY_GRADIENT;
-
-    // clang-format off
-    return P{.seed = (uint)node.val<int>(A_SEED),
-             .count = size_t(node.val<int>(A_CONTROL_POINTS_COUNT)),
-             .m_exp = node.val<float>(A_M_EXP),
-	     .drainage_noise_strength = node.val<float>(A_DRAINAGE_NOISE_STRENGTH),
-             .uplift_rate = node.val<float>(A_UPLIFT_RATE),
-             .tolerance = node.val<float>(A_TOLERANCE),
-             .max_iterations = node.val<int>(A_MAX_ITERATIONS),
-             .uniform_smax = uniform_smax,
-             .smin = smin,
-             .smax = smax,
-             .strength = node.val<float>(A_STRENGTH),
-             .scale_erodibility_with_z = node.val<bool>(A_SCALE_ERODIBILITY_WITH_Z),
-             .erodibility_distrib_exp = node.val<float>(A_ERODIBILITY_DISTRIB_EXP),
-             .deposition_ir = deposition_ir,
-             .deposition_strength = node.val<float>(A_DEPOSITION_STRENGTH),
-	     .stream_strength = node.val<float>(A_STREAM_STRENGTH),
-	     .stream_exp = node.val<float>(A_STREAM_EXP),
-	     .itp_method = itp_method,
-	     .enable_post_smoothing = node.val<bool>(A_ENABLE_POST_SMOOTHING)
-    };
-    // clang-format on
-  }();
+  // clang-format off
+  const auto seed                     = static_cast<uint>(node.val<int>(A_SEED));
+  const auto control_points_count     = static_cast<size_t>(node.val<int>(A_CONTROL_POINTS_COUNT));
+  const auto m_exp                    = node.val<float>(A_M_EXP);
+  const auto drainage_noise_strength  = node.val<float>(A_DRAINAGE_NOISE_STRENGTH);
+  const auto uplift_rate              = node.val<float>(A_UPLIFT_RATE);
+  const auto tolerance                = node.val<float>(A_TOLERANCE);
+  const auto max_iterations           = node.val<int>(A_MAX_ITERATIONS);
+  const auto uniform_smax             = node.val<bool>(A_UNIFORM_SMAX);
+  const auto smax                     = node.val<float>(A_SMAX);
+  const auto smin                     = uniform_smax ? smax : node.val<float>(A_SMIN);
+  const auto strength                 = node.val<float>(A_STRENGTH);
+  const auto scale_erodibility_with_z = node.val<bool>(A_SCALE_ERODIBILITY_WITH_Z);
+  const auto erodibility_distrib_exp  = node.val<float>(A_ERODIBILITY_DISTRIB_EXP);
+  const auto deposition_ir            = node.val_pixel_radius(A_DEPOSITION_RADIUS, 0);
+  const auto deposition_strength      = node.val<float>(A_DEPOSITION_STRENGTH);
+  const auto stream_strength          = node.val<float>(A_STREAM_STRENGTH);
+  const auto stream_exp               = node.val<float>(A_STREAM_EXP);
+  const auto enable_post_smoothing    = node.val<bool>(A_ENABLE_POST_SMOOTHING);
+  const auto itp_method               = (node.val<std::string>(A_ITP_METHOD) == "Natural Neighbors") ? hmap::InterpolationMethod2D::ITP2D_NNI : hmap::InterpolationMethod2D::ITP2D_DELAUNAY_GRADIENT;
+  // clang-format on
 
   // --- Prepare default noise
 
@@ -178,84 +149,71 @@ void compute_hydraulic_saleve_node(BaseNode &node)
 
   // --- Compute
 
-  hmap::for_each_tile(
-      {p_in, p_dx, p_dy, p_mask},
-      {p_out},
-      [&node, &params](std::vector<const hmap::Array *> p_arrays_in,
-                       std::vector<hmap::Array *>       p_arrays_out,
-                       const hmap::TileRegion          &region)
-      {
-        const auto [pa_in, pa_dx, pa_dy, pa_mask] = unpack<4>(p_arrays_in);
-        auto [pa_out]                             = unpack<1>(p_arrays_out);
-
-        // add a small background noise to avoid numerical artefacts
-        // due to perfectly flat surfaces
-        hmap::Array base = *pa_in + 1e-3f * hmap::gpu::noise(hmap::NoiseType::PERLIN,
-                                                             region.shape,
-                                                             {2.f, 2.f},
-                                                             params.seed,
-                                                             nullptr,
-                                                             nullptr,
-                                                             region.bbox);
-
-        *pa_out = hmap::hydraulic_saleve(base,
-                                         pa_mask,
-                                         params.seed,
-                                         params.count,
-                                         params.m_exp,
-                                         params.uplift_rate,
-                                         params.tolerance,
-                                         params.max_iterations,
-                                         params.smin,
-                                         params.smax,
-                                         params.strength,
-                                         params.scale_erodibility_with_z,
-                                         params.erodibility_distrib_exp,
-                                         params.drainage_noise_strength,
-                                         /* enable_post_slope_limiter */ false,
-                                         /* post_slope_limit */ 0.f,
-                                         params.enable_post_smoothing,
-                                         params.itp_method,
-                                         pa_dx,
-                                         pa_dy);
-      },
-      node.cfg().cm_single_array); // forced, not tileable
+  *p_out = hmap::va::hydraulic_saleve(node.cfg().cm_cpu,
+                                      *p_in,
+                                      seed,
+                                      control_points_count,
+                                      m_exp,
+                                      uplift_rate,
+                                      tolerance,
+                                      max_iterations,
+                                      smin,
+                                      smax,
+                                      strength,
+                                      scale_erodibility_with_z,
+                                      erodibility_distrib_exp,
+                                      drainage_noise_strength,
+                                      /* enable_post_slope_limiter */ false,
+                                      /* post_slope_limit */ 0.f,
+                                      enable_post_smoothing,
+                                      itp_method,
+                                      p_dx,
+                                      p_dy,
+                                      p_mask);
 
   // add 1st layer of deposition
-  if (params.deposition_ir > 0 && params.deposition_strength > 0.f)
+  if (deposition_ir > 0 && deposition_strength > 0.f)
   {
     hmap::for_each_tile(
+        {},
         {p_out},
-        [&params](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &)
+        [deposition_ir, deposition_strength](std::vector<const hmap::Array *> p_arrays_in,
+                                             std::vector<hmap::Array *> p_arrays_out,
+                                             const hmap::TileRegion &)
         {
-          auto [pa_out] = unpack<1>(p_arrays);
+          auto [pa_out] = unpack<1>(p_arrays_out);
 
           hmap::gpu::deposition_fill_holes(*pa_out,
-                                           params.deposition_ir,
-                                           params.deposition_strength,
+                                           deposition_ir,
+                                           deposition_strength,
                                            /* iterations */ 1);
         },
         node.cfg().cm_gpu);
   }
 
   // add fine river erosion
-  if (params.stream_strength > 0.f)
+  if (stream_strength > 0.f)
   {
     hmap::for_each_tile(
-        {p_out, p_mask},
-        [&params](std::vector<hmap::Array *> p_arrays, const hmap::TileRegion &)
+        {p_mask},
+        {p_out},
+        [stream_strength, deposition_ir, deposition_strength, stream_exp](
+            std::vector<const hmap::Array *> p_arrays_in,
+            std::vector<hmap::Array *>       p_arrays_out,
+            const hmap::TileRegion &)
         {
-          auto [pa_out, pa_mask] = unpack<2>(p_arrays);
+          auto [pa_mask] = unpack<1>(p_arrays_in);
+          auto [pa_out]  = unpack<1>(p_arrays_out);
 
           hmap::gpu::hydraulic_stream_log(*pa_out,
-                                          params.stream_strength,
+                                          stream_strength,
                                           /* talus_ref */ 0.1f,
                                           pa_mask,
-                                          params.deposition_ir,
-                                          params.deposition_strength,
-                                          params.stream_exp,
+                                          deposition_ir,
+                                          deposition_strength,
+                                          stream_exp,
                                           /* gradient_scaling_ratio */ 1.f,
-                                          params.deposition_ir,
+                                          deposition_ir,
                                           /* saturation_ratio */ 1.f,
                                           /* p_bedrock */ nullptr,
                                           /* p_moisture_map */ nullptr,
@@ -267,7 +225,7 @@ void compute_hydraulic_saleve_node(BaseNode &node)
   }
 
   // post-process
-  p_out->smooth_overlap_buffers();
+  p_out->sync_overlap_buffers();
   post_process_heightmap(node, *p_out, p_in);
 }
 
