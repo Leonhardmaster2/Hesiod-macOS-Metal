@@ -399,6 +399,7 @@ Phase4Run phase4_evaluate(const std::string &filename,
 
   // Optional A/B diagnostics: HESIOD_PHASE4_DUMP_DIR=<dir> writes every
   // VirtualArray output of every node as <dir>/<mode>/<graph>_<node>_<port>.npy
+  // (VirtualTexture outputs as one <..>_<port>_c<channel>.npy per channel)
   // so two runs (e.g. with and without HIGHMAP_DISABLE_METAL) can be diffed.
   if (const char *dump_dir = std::getenv("HESIOD_PHASE4_DUMP_DIR"); dump_dir && *dump_dir)
   {
@@ -417,17 +418,31 @@ Phase4Run phase4_evaluate(const std::string &filename,
           continue;
         for (int port = 0; port < node->get_nports(); ++port)
         {
-          if (node->get_port_type(port) != gnode::PortType::OUT ||
-              node->get_data_type(port) != typeid(hmap::VirtualArray).name())
-            continue;
-          auto *array = node->get_value_ref<hmap::VirtualArray>(port);
-          if (!array || array->empty())
+          if (node->get_port_type(port) != gnode::PortType::OUT)
             continue;
           std::string label = node->get_port_label(port);
           std::replace(label.begin(), label.end(), ' ', '_');
-          array->to_array(config.cm_single_array)
-              .to_numpy((dir / (graph_id + "_" + node_id + "_" + label + ".npy"))
-                            .string());
+          const std::string stem = graph_id + "_" + node_id + "_" + label;
+
+          if (node->get_data_type(port) == typeid(hmap::VirtualArray).name())
+          {
+            auto *array = node->get_value_ref<hmap::VirtualArray>(port);
+            if (!array || array->empty())
+              continue;
+            array->to_array(config.cm_single_array)
+                .to_numpy((dir / (stem + ".npy")).string());
+          }
+          else if (node->get_data_type(port) == typeid(hmap::VirtualTexture).name())
+          {
+            auto *texture = node->get_value_ref<hmap::VirtualTexture>(port);
+            if (!texture)
+              continue;
+            for (int c = 0; c < texture->channels(); ++c)
+              if (!texture->channel(c).empty())
+                texture->channel(c)
+                    .to_array(config.cm_single_array)
+                    .to_numpy((dir / (stem + "_c" + std::to_string(c) + ".npy")).string());
+          }
         }
       }
     }
