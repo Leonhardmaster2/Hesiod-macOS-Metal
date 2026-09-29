@@ -1,10 +1,48 @@
 # Apple Metal Current State
 
-Snapshot date: 2026-09-04
+Snapshot date: 2026-09-29 (upstream sync). The 2026-09-04 snapshot is kept
+below as history.
 
-This is the current state of the Apple Silicon/Metal work across the Hesiod
-application and its HighMap backend. The snapshot is on the personal GitHub
-repositories, not the upstream `ottolink-dev` repositories.
+## 2026-09-29 upstream sync
+
+| Repository | Branch | Upstream merged |
+|---|---|---|
+| Hesiod | `macos/upstream-sync-2026-09-29` (from `macos/metal-on-dev`) | `upstream/dev` `47754242` (243 commits) |
+| HighMap (submodule) | `feature/apple-metal-backend` | `upstream/dev` `7f439892f` (103 commits), contains upstream Hesiod's pin `89f329403` |
+
+What changed for macOS:
+
+* HighMap's Metal thermal kernels now follow upstream's new border rule.
+  New Metal routes: `smooth_cpulse`, `local_max`/`local_min` (DISK, SQUARE,
+  OCTAGON, and so all morphology), `morphological_gradient` and `noise_fbm`.
+  The synchronous wrappers reuse their buffers. Details are in HighMap's
+  `docs/apple_port/UPSTREAM_SYNC_2026-09-29.md`.
+* Upstream removed the `MorphologicalGradient` node; legacy graphs are
+  converted to `MorphologicalOperators`. That node no longer has a resident
+  path, but its min/max passes now run natively on Metal through HighMap.
+* The Metal graph code was ported to the current GNode API (`gnode::PortType`,
+  typed `get_value_ref`) and to upstream's const input pointers.
+* The Meta `<sstream>` workaround is now attached to the `meta` target as a
+  PUBLIC option, so it reaches upstream's renamed `hesiod_core` target.
+* `Thermal` still only requests a deposition map when that port is
+  connected, which keeps it on the Metal path.
+
+Validation (Apple M3, 8 GB, Release, `--phase4-benchmark` on
+`Hesiod/data/examples/SpectralEqualizer.hsd`, tiling 1×1):
+
+| Size | Resident nodes | Uploads / readbacks | Resident wall | Host fallback wall | Parity (max abs) |
+|---|---:|---:|---:|---:|---|
+| 512² | 4 | 0 / 1 | 14.7 ms | (includes first-run init) | 0.00902 PASS |
+| 1024² | 4 | 0 / 1 | 93.2 ms | 145.0 ms | 0.00459 PASS |
+| 2048² | 4 | 0 / 1 | 677.1 ms | 852.3 ms | 0.00233 PASS |
+
+The upstream `bench_local_min_max.hsd` and `bench_coherent_noise.hsd` graphs
+and 19 example graphs that use the routed node types (CoherentNoise,
+MorphologicalOperators, legacy MorphologicalGradient, SmoothCpulse, Thermal,
+SelectSlope, ExpandShrink, Jagged, RecastCliff, …) run in `--batch` mode at
+512² without errors.
+
+# Snapshot 2026-09-04 (history)
 
 ## Repository state
 
