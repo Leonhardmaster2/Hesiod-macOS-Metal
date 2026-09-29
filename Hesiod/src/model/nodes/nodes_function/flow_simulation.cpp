@@ -32,6 +32,9 @@ constexpr const char *A_DRY_OUT_RATIO           = "dry_out_ratio";
 constexpr const char *A_FLUX_DIFFUSION          = "flux_diffusion";
 constexpr const char *A_FLUX_DIFFUSION_STRENGTH = "flux_diffusion_strength";
 constexpr const char *A_SOLVER_STRIDE           = "solver_stride";
+constexpr const char *A_FAST_SOLVER             = "fast_solver";
+constexpr const char *A_COARSE_FACTOR           = "coarse_factor";
+constexpr const char *A_REFINE_RATIO            = "refine_ratio";
 constexpr const char *A_DEPTH_MAP_TYPE          = "depth_map_type";
 constexpr const char *A_POST_FILTER             = "post_filter";
 constexpr const char *A_RADIUS                  = "radius";
@@ -66,6 +69,12 @@ void setup_flow_simulation_node(BaseNode &node)
   add_bool(node, A_FLUX_DIFFUSION, "Enable Flux Diffusion", true);
   add_float(node, A_FLUX_DIFFUSION_STRENGTH, "Flux Diffusion Strength", 1e-6f, 1e-6f, 1e-1f, "{:.2e}", true);
   add_int(node, A_SOLVER_STRIDE, "Solver Iteration Stride", 1, 1, 32);
+  // coarse-to-fine: full duration on a coarse grid, short full-resolution
+  // refinement; ~15x faster at 2048^2+, close to but not identical with the
+  // reference solver
+  add_bool(node, A_FAST_SOLVER, "Fast Coarse-to-Fine Solver", false);
+  add_int(node, A_COARSE_FACTOR, "Coarse Factor", 4, 2, 8);
+  add_float(node, A_REFINE_RATIO, "Refinement Ratio", 0.05f, 0.01f, 0.5f);
 
   node.set_current_category("Post-Filter");
   add_bool(node, A_AREA_FILTER, "Remove Small Flow Regions", true);
@@ -104,6 +113,9 @@ void compute_flow_simulation_node(BaseNode &node)
   const auto flux_diffusion     = node.val<bool>(A_FLUX_DIFFUSION);
   const auto flux_strength      = node.val<float>(A_FLUX_DIFFUSION_STRENGTH);
   const auto solver_stride      = node.val<int>(A_SOLVER_STRIDE);
+  const auto fast_solver        = node.val<bool>(A_FAST_SOLVER);
+  const auto coarse_factor      = node.val<int>(A_COARSE_FACTOR);
+  const auto refine_ratio       = node.val<float>(A_REFINE_RATIO);
   const auto post_filter        = node.val<bool>(A_POST_FILTER);
   const auto area_filter        = node.val<bool>(A_AREA_FILTER);
   const auto radius_limit       = node.val<float>(A_RADIUS_LIMIT);
@@ -158,20 +170,36 @@ void compute_flow_simulation_node(BaseNode &node)
         hmap::Array depth_scaled = *pa_depth;
         hmap::remap(depth_scaled, 0.f, 1.f, dmin, dmax);
 
-        *pa_water = hmap::gpu::flow_simulation(*pa_z,
-                                               water_depth,
-                                               depth_scaled,
-                                               iterations,
-                                               0.5f,
-                                               flux_diffusion,
-                                               flux_strength,
-                                               dry_out_ratio,
-                                               pa_rain,
-                                               /* rain_rate */ 0.f,
-                                               /* evap_rate */ 0.f,
-                                               outflow_boundaries,
-                                               /* pa_u */ nullptr,
-                                               /* pa_v */ nullptr);
+        if (fast_solver)
+          *pa_water = hmap::gpu::flow_simulation_coarse_to_fine(*pa_z,
+                                                                water_depth,
+                                                                depth_scaled,
+                                                                iterations,
+                                                                coarse_factor,
+                                                                refine_ratio,
+                                                                0.5f,
+                                                                flux_diffusion,
+                                                                flux_strength,
+                                                                dry_out_ratio,
+                                                                pa_rain,
+                                                                /* rain_rate */ 0.f,
+                                                                /* evap_rate */ 0.f,
+                                                                outflow_boundaries);
+        else
+          *pa_water = hmap::gpu::flow_simulation(*pa_z,
+                                                 water_depth,
+                                                 depth_scaled,
+                                                 iterations,
+                                                 0.5f,
+                                                 flux_diffusion,
+                                                 flux_strength,
+                                                 dry_out_ratio,
+                                                 pa_rain,
+                                                 /* rain_rate */ 0.f,
+                                                 /* evap_rate */ 0.f,
+                                                 outflow_boundaries,
+                                                 /* pa_u */ nullptr,
+                                                 /* pa_v */ nullptr);
       },
       cm);
 

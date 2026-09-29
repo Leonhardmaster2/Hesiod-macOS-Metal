@@ -7562,6 +7562,9 @@
                     "flux_diffusion",
                     "flux_diffusion_strength",
                     "solver_stride",
+                    "fast_solver",
+                    "coarse_factor",
+                    "refine_ratio",
                     "area_filter",
                     "radius_limit",
                     "post_filter",
@@ -7576,6 +7579,12 @@
                 "key": "area_filter",
                 "label": "Remove Small Flow Regions",
                 "type": "Bool"
+            },
+            "coarse_factor": {
+                "description": "Resolution divider of the coarse pass of the fast solver.",
+                "key": "coarse_factor",
+                "label": "Coarse Factor",
+                "type": "Integer"
             },
             "depth_map_type": {
                 "description": "No description",
@@ -7594,6 +7603,12 @@
                 "key": "duration",
                 "label": "Simulation Duration",
                 "type": "Float"
+            },
+            "fast_solver": {
+                "description": "Runs the full simulation duration on a grid Coarse Factor times smaller, then refines the upsampled water at full resolution for Refinement Ratio of the iterations. Much faster on large heightmaps (about 15x at 4096x4096) with results close to, but not identical with, the reference solver.",
+                "key": "fast_solver",
+                "label": "Fast Coarse-to-Fine Solver",
+                "type": "Bool"
             },
             "flux_diffusion": {
                 "description": "No description",
@@ -7629,6 +7644,12 @@
                 "description": "No description",
                 "key": "radius_limit",
                 "label": "Minimum Lake Radius",
+                "type": "Float"
+            },
+            "refine_ratio": {
+                "description": "Fraction of the iterations run at full resolution by the fast solver.",
+                "key": "refine_ratio",
+                "label": "Refinement Ratio",
                 "type": "Float"
             },
             "solver_stride": {
