@@ -423,6 +423,26 @@ void MetalGraphExecution::flush()
         this->cache_->store(array, it->second);
     }
 
+  // Every VirtualArray a resident node wrote must hold its data on the host
+  // too, not only the unconnected terminal outputs: the GUI node previews and
+  // 2D/3D viewers, exports and later host-only updates read node outputs
+  // directly. Without this, intermediate resident outputs stayed zero/stale
+  // on the host. The session uses shared storage and is finished, so this is
+  // a plain copy; the device resources stay available to the cache above.
+  const hmap::ComputeMode single_array_mode = {
+      .mode = hmap::ForEachMode::VA_SINGLE_ARRAY,
+      .trim_storage = false};
+  for (const auto *array : this->device_modified_)
+  {
+    auto it = this->device_arrays_.find(array);
+    if (it == this->device_arrays_.end())
+      continue;
+    const hmap::Array host = this->session_->download(it->second);
+    const_cast<hmap::VirtualArray *>(array)->from_array(host, single_array_mode);
+    this->host_readbacks_++;
+    this->host_readback_bytes_ += host.vector.size() * sizeof(float);
+  }
+
   this->capture_metrics();
   this->flushed_ = true;
 }
