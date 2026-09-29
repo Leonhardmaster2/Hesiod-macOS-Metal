@@ -255,11 +255,10 @@ void MetalGraphExecution::prepare_node(BaseNode &node)
   if (this->cache_ && this->cache_->enabled())
     for (int port = 0; port < node.get_nports(); ++port)
     {
-      if (node.get_port_type(port) != gngui::PortType::OUT ||
+      if (node.get_port_type(port) != gnode::PortType::OUT ||
           node.get_data_type(port) != typeid(hmap::VirtualArray).name())
         continue;
-      this->cache_->invalidate(
-          static_cast<hmap::VirtualArray *>(node.get_data_ref(port)));
+      this->cache_->invalidate(node.get_value_ref<hmap::VirtualArray>(port));
     }
 
   if (!resident_candidate(node.get_node_type()))
@@ -277,7 +276,7 @@ void MetalGraphExecution::prepare_host_node(BaseNode       &node,
     if (node.get_data_type(port) != typeid(hmap::VirtualArray).name())
       continue;
 
-    auto *array = static_cast<hmap::VirtualArray *>(node.get_data_ref(port));
+    auto *array = node.get_value_ref<hmap::VirtualArray>(port);
     if (array && this->contains(array) && this->device_modified_.contains(array))
       this->materialize(array);
   }
@@ -373,10 +372,9 @@ void MetalGraphExecution::record_resident(const BaseNode       &node,
   this->node_executions_.push_back(
       {node.get_id(), node.get_node_type(), "resident Metal", detail});
   for (int port = 0; port < node.get_nports(); ++port)
-    if (node.get_port_type(port) == gngui::PortType::OUT &&
+    if (node.get_port_type(port) == gnode::PortType::OUT &&
         node.get_data_type(port) == typeid(hmap::VirtualArray).name())
-      if (auto *array = static_cast<hmap::VirtualArray *>(
-              const_cast<BaseNode &>(node).get_data_ref(port)))
+      if (auto *array = node.get_value_ref<hmap::VirtualArray>(port))
         this->resident_tiles_ += static_cast<std::size_t>(array->get_ntiles());
 }
 
@@ -386,10 +384,9 @@ void MetalGraphExecution::record_host(const BaseNode       &node,
   this->node_executions_.push_back(
       {node.get_id(), node.get_node_type(), "host fallback", detail});
   for (int port = 0; port < node.get_nports(); ++port)
-    if (node.get_port_type(port) == gngui::PortType::OUT &&
+    if (node.get_port_type(port) == gnode::PortType::OUT &&
         node.get_data_type(port) == typeid(hmap::VirtualArray).name())
-      if (auto *array = static_cast<hmap::VirtualArray *>(
-              const_cast<BaseNode &>(node).get_data_ref(port)))
+      if (auto *array = node.get_value_ref<hmap::VirtualArray>(port))
         this->fallback_tiles_ += static_cast<std::size_t>(array->get_ntiles());
 }
 

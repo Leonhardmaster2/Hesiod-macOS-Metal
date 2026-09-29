@@ -86,7 +86,7 @@ bool thermal_post_process_is_identity(const BaseNode &node)
 }
 
 bool try_resident_thermal(BaseNode                   &node,
-                          hmap::VirtualArray        *p_in,
+                          const hmap::VirtualArray  *p_in,
                           hmap::VirtualArray        *p_out,
                           hmap::VirtualArray        *p_deposition,
                           const std::string        &type,

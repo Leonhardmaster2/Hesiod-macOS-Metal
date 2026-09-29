@@ -83,8 +83,8 @@ bool spectral_post_process_is_identity(const BaseNode &node,
 }
 
 bool try_resident_spectral_equalizer(BaseNode                  &node,
-                                     hmap::VirtualArray        *p_in,
-                                     hmap::VirtualArray        *p_mask,
+                                     const hmap::VirtualArray  *p_in,
+                                     const hmap::VirtualArray  *p_mask,
                                      hmap::VirtualArray        *p_out,
                                      const std::vector<float>  &weights,
                                      int                        ir_min,

@@ -346,7 +346,7 @@ std::optional<Phase4Output> phase4_output(GraphManager &manager,
 
       for (int port = 0; port < node->get_nports(); ++port)
       {
-        if (node->get_port_type(port) != gngui::PortType::OUT ||
+        if (node->get_port_type(port) != gnode::PortType::OUT ||
             node->get_data_type(port) != typeid(hmap::VirtualArray).name())
           continue;
 

@@ -112,15 +112,13 @@ if(HESIOD_ENABLE_UI_TESTS)
 endif()
 
 # The upstream Meta snapshot used by current Hesiod declares std::ostringstream
-# in a public trait header without including <sstream>. Keep this compatibility
-# workaround local to Meta consumers on AppleClang until the dependency fixes
-# its header.
-if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  foreach(_meta_consumer meta meta_qt hesiod)
-    if(TARGET ${_meta_consumer})
-      target_compile_options(${_meta_consumer} PRIVATE -include sstream)
-    endif()
-  endforeach()
+# in a public trait header without including <sstream>. libc++ does not pull it
+# in transitively, so force-include it for Meta and, through PUBLIC usage
+# requirements, for every target that consumes Meta's headers (hesiod_core,
+# the tests, the bridges) on AppleClang until the dependency fixes its header.
+if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND TARGET meta)
+  target_compile_options(
+    meta PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include sstream>")
 endif()
 
 if(HESIOD_ENABLE_GENERATE_APP_IMAGE)
