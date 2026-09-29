@@ -1,3 +1,43 @@
+# Hesiod — macOS / Apple Metal edition
+
+This repository is a macOS build of [Hesiod](https://github.com/ottolink-dev/Hesiod)
+for Apple Silicon. It tracks upstream `dev` and uses the native Metal compute
+backend from [Leonhardmaster2/HighMap](https://github.com/Leonhardmaster2/HighMap)
+(branch `feature/apple-metal-backend`). Upstream Hesiod does not support macOS.
+
+What differs from upstream:
+
+* **Builds on macOS:** Apple Clang, Homebrew libomp/OpenCL headers, the
+  OpenGL 3.3 core-profile request before `QApplication`, and linker flags.
+* **HighMap on Metal:** noise and fBm, smoothing, local min/max and morphology,
+  thermal erosion, hydraulic virtual pipes and advection run natively on
+  Metal. A GPU-resident graph path keeps chains of nodes on the GPU.
+  `HIGHMAP_DISABLE_METAL=1` switches back to upstream's CPU/OpenCL code.
+* **Fixes found on macOS:** a tile-storage race (crashes/hangs in distributed
+  mode), `remap` precision on Apple Silicon (NaN regions in erosion nodes),
+  and thread-safety of the natural-neighbour interpolation library.
+
+Status and validation: `docs/apple_port/APPLE_METAL_CURRENT_STATE.md`.
+
+## Build and install on macOS
+
+```bash
+brew install cmake ninja qt opencv gsl glm assimp libomp spdlog \
+  nlohmann-json openexr libtiff zstd opencl-headers opencl-clhpp-headers
+git clone --recurse-submodules https://github.com/Leonhardmaster2/Hesiod-macOS-Metal.git
+cd Hesiod-macOS-Metal
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="$(brew --prefix qt);$(brew --prefix)" \
+  -DHESIOD_ENABLE_GENERATE_APP_IMAGE=OFF -DHIGHMAP_ENABLE_METAL=ON
+cmake --build build
+scripts/macos/install_macos_app.sh   # -> ~/Applications/Hesiod.app
+```
+
+The app bundle links against the Homebrew libraries it was built with. Its
+log is `~/Library/Logs/Hesiod/hesiod.log`.
+
+---
+
 # Hesiod
 
 A desktop application for node-based procedural terrain generation.
