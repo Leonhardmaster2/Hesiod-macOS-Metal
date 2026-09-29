@@ -129,6 +129,12 @@ std::vector<Spec> specs_for(int tool)
   case ToolDisplay:
     // terrain, water, points and path visibility are the Preview panel's eyes
     return {bspec(visible_key(qtr::keys::mesh::plane), "Ground Plane", "Layers"),
+            // heightmaps above the cap are drawn with a resampled mesh and
+            // full-resolution per-pixel shading
+            chspec("max_mesh_resolution",
+                   "Mesh Detail",
+                   "Performance",
+                   {{512, "512"}, {1024, "1024"}, {2048, "2048"}, {0, "Full"}}),
             bspec("wireframe_mode", "Wireframe", "Debug"),
             bspec("normal_visualization", "Normals", "Debug")};
 

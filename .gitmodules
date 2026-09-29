@@ -12,7 +12,7 @@
 	url = https://github.com/ottolink-dev/GNode.git
 [submodule "external/QTerrainRenderer"]
 	path = external/QTerrainRenderer
-	url = https://github.com/ottolink-dev/QTerrainRenderer.git
+	url = https://github.com/Leonhardmaster2/QTerrainRenderer.git
 [submodule "external/QTextureDownloader"]
 	path = external/QTextureDownloader
 	url = https://github.com/ottolink-dev/QTextureDownloader.git
