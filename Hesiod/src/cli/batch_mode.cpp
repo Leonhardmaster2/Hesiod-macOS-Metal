@@ -397,6 +397,42 @@ Phase4Run phase4_evaluate(const std::string &filename,
     }
   }
 
+  // Optional A/B diagnostics: HESIOD_PHASE4_DUMP_DIR=<dir> writes every
+  // VirtualArray output of every node as <dir>/<mode>/<graph>_<node>_<port>.npy
+  // so two runs (e.g. with and without HIGHMAP_DISABLE_METAL) can be diffed.
+  if (const char *dump_dir = std::getenv("HESIOD_PHASE4_DUMP_DIR"); dump_dir && *dump_dir)
+  {
+    const std::filesystem::path dir = std::filesystem::path(dump_dir) /
+                                      (resident ? "resident" : "fallback");
+    std::filesystem::create_directories(dir);
+    for (const auto &graph_id : manager.get_graph_order())
+    {
+      auto *graph = manager.get_graph_ref_by_id(graph_id);
+      if (!graph)
+        continue;
+      for (const auto &[node_id, node_ptr] : graph->get_nodes())
+      {
+        auto *node = dynamic_cast<BaseNode *>(node_ptr.get());
+        if (!node)
+          continue;
+        for (int port = 0; port < node->get_nports(); ++port)
+        {
+          if (node->get_port_type(port) != gnode::PortType::OUT ||
+              node->get_data_type(port) != typeid(hmap::VirtualArray).name())
+            continue;
+          auto *array = node->get_value_ref<hmap::VirtualArray>(port);
+          if (!array || array->empty())
+            continue;
+          std::string label = node->get_port_label(port);
+          std::replace(label.begin(), label.end(), ' ', '_');
+          array->to_array(config.cm_single_array)
+              .to_numpy((dir / (graph_id + "_" + node_id + "_" + label + ".npy"))
+                            .string());
+        }
+      }
+    }
+  }
+
   const auto preview_start = std::chrono::steady_clock::now();
   if (auto output = phase4_output(manager, config))
   {
@@ -869,7 +905,9 @@ void run_phase4_benchmark(const std::string &filename,
 
     auto *graph = edited.get_graph_ref_by_id(edited.get_graph_order().front());
     auto *node = graph ? graph->get_node_ref_by_id<BaseNode>(node_id) : nullptr;
-    if (!node) return;
+    // The edit targets are the SpectralEqualizer.hsd node ids; skip graphs
+    // where that id is some other node type.
+    if (!node || node->get_node_type() != label) return;
 
     mutate(*node);
     const auto edit_start = std::chrono::steady_clock::now();
